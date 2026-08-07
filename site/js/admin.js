@@ -24,6 +24,7 @@
     frameworks: "Frameworks"
   };
   const PACE_DOMAIN_LABELS = { position: "Position", acquire: "Acquire", convert: "Convert", expand: "Expand" };
+  const SCALE_LABELS = { 1: "Absent", 2: "Ad hoc", 3: "Defined", 4: "Repeatable", 5: "Optimised" };
 
   let accessToken = null;
   let allLeads = [];
@@ -49,9 +50,13 @@
     return data.access_token;
   }
 
+  // PostgREST resource embedding (the sign_responses(*) / assessment_responses(*)
+  // parts) follows the lead_id foreign keys automatically, so each lead comes
+  // back with its full per-question detail in one request — no separate
+  // round trip needed.
   async function fetchLeads() {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/leads?select=*&order=created_at.desc&limit=200`,
+      `${SUPABASE_URL}/rest/v1/leads?select=*,sign_responses(*),assessment_responses(*)&order=created_at.desc&limit=200`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${accessToken}` } }
     );
     if (!response.ok) {
@@ -82,10 +87,20 @@
       blockCell = `<span class="admin-pill admin-pill--block">${escapeHtml(PACE_DOMAIN_LABELS[lead.pace_block] || lead.pace_block)}${score != null ? ` (${escapeHtml(score)}%)` : ""}</span>`;
     }
 
+    const selectedSigns = Array.isArray(lead.sign_responses) ? lead.sign_responses.filter((s) => s.selected) : [];
     let symptomsCell = "—";
-    if (Array.isArray(lead.symptoms) && lead.symptoms.length) {
-      const items = lead.symptoms.map((s) => `<li>[${escapeHtml(PACE_DOMAIN_LABELS[s.domain] || s.domain)}] ${escapeHtml(s.text)}</li>`).join("");
-      symptomsCell = `<details><summary>${lead.symptoms.length} selected</summary><ul class="admin-symptom-list">${items}</ul></details>`;
+    if (selectedSigns.length) {
+      const items = selectedSigns.map((s) => `<li>[${escapeHtml(PACE_DOMAIN_LABELS[s.domain] || s.domain)}] ${escapeHtml(s.question_text)}</li>`).join("");
+      symptomsCell = `<details><summary>${selectedSigns.length} selected</summary><ul class="admin-symptom-list">${items}</ul></details>`;
+    }
+
+    const answers = Array.isArray(lead.assessment_responses) ? lead.assessment_responses.slice() : [];
+    let answersCell = "—";
+    if (answers.length) {
+      const order = ["position", "acquire", "convert", "expand"];
+      answers.sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
+      const items = answers.map((a) => `<li>[${escapeHtml(PACE_DOMAIN_LABELS[a.domain] || a.domain)}] ${escapeHtml(a.question_text)} — <strong>${escapeHtml(SCALE_LABELS[a.scale_value] || a.scale_value)}</strong> (${escapeHtml(a.scale_value)}/5)</li>`).join("");
+      answersCell = `<details><summary>${answers.length} answers</summary><ul class="admin-symptom-list">${items}</ul></details>`;
     }
 
     return `
@@ -98,6 +113,7 @@
         <td>${escapeHtml(serviceLabel)}</td>
         <td>${blockCell}</td>
         <td>${symptomsCell}</td>
+        <td>${answersCell}</td>
       </tr>
     `;
   }

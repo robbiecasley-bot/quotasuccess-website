@@ -4,7 +4,7 @@ The admin dashboard at `/admin.html` on your live site (e.g. `https://quotasucce
 
 ## How it's kept private
 
-This page isn't listed anywhere in the site's navigation, and it's marked so search engines won't index it — but **that's not what actually protects the data**. The real protection is a database rule (in Supabase, called "row-level security" or RLS): the `leads` table only allows read access to someone logged in as `robbie@quotasuccess.com.au`. Anyone else — including someone who guesses the `/admin.html` URL — gets an empty result, not your data, even without a login form at all. That rule lives in `supabase/schema.sql` and is already applied to the live database.
+This page isn't listed anywhere in the site's navigation, and it's marked so search engines won't index it — but **that's not what actually protects the data**. The real protection is a database rule (in Supabase, called "row-level security" or RLS): the `leads`, `sign_responses` and `assessment_responses` tables only allow read access to someone logged in as `robbie@quotasuccess.com.au`. Anyone else — including someone who guesses the `/admin.html` URL — gets an empty result, not your data, even without a login form at all. Those rules live in `supabase/schema.sql` and are already applied to the live database.
 
 You'll notice `site/js/admin.js` contains a long key (the Supabase "anon" key). That's meant to be public — every Supabase project's anon key is designed to be safely visible in a browser. It only identifies *which* Supabase project to talk to; it grants no access on its own. Access comes from the RLS rule above, combined with actually being logged in.
 
@@ -28,7 +28,7 @@ That's it — no code changes needed, no redeploy needed. You can log in immedia
 
 1. Go to `/admin.html` on the live site.
 2. Sign in with the email and password from setup.
-3. You'll see a table of every submission, newest first: date, source (general enquiry vs. self-assessment), email, company, role, what they said they're interested in, their PACE "block" (if they completed the assessment), and which symptoms they selected (click "N selected" to expand the list).
+3. You'll see a table of every submission, newest first: date, source (general enquiry vs. self-assessment), email, company, role, what they said they're interested in, their PACE "block" (if they completed the assessment), which of the 24 "Signs" questions they selected (click "N selected" to expand the list, showing only the ones they picked), and — for a completed self-assessment — every one of the 16 individual questions with its exact answer (click "16 answers" to expand: e.g. "[Convert] Our forecast is built on tracked lead and lag measures, not gut feel. — Ad hoc (2/5)"). Nothing about a submission is only available as a rolled-up summary; the full detail behind every score is there if you want it.
 4. Use the two dropdown filters at the top to narrow the list — by source, or by which service they're interested in. This is the fastest way to see, for example, only the people who said they want the "Fractional" service.
 5. Click **Refresh** to pull in anything submitted since you opened the page.
 6. Click **Sign out** when you're done, especially on a shared or public computer — the session isn't saved anywhere, so closing the browser tab also effectively signs you out.

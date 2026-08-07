@@ -81,7 +81,7 @@ You never need to touch the database by hand for this — it's always done throu
 This shouldn't come up often, but if it ever does (e.g. moving to a new Supabase organisation):
 
 1. Create the new Supabase project.
-2. Run the entire contents of `supabase/schema.sql` against it (Supabase dashboard → SQL Editor → paste and run) — this recreates the `leads` and `lead_submission_attempts` tables, the security rules, and the admin read policy exactly as they exist today.
+2. Run the entire contents of `supabase/schema.sql` against it (Supabase dashboard → SQL Editor → paste and run) — this recreates `leads`, `sign_responses`, `assessment_responses` and `lead_submission_attempts`, the security rules, and the admin read policies exactly as they exist today.
 3. In the Netlify dashboard, update `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the new project's values (Supabase dashboard → Project Settings → API).
 4. In `site/js/admin.js`, update the two constants at the top (`SUPABASE_URL` and `SUPABASE_ANON_KEY`) to the new project's values, commit, and push.
 5. Recreate your admin login in the new project (see `ADMIN.md`).

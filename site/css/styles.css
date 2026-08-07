@@ -664,7 +664,7 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   box-shadow: var(--shadow-card);
   overflow-x: auto;
 }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 920px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1080px; }
 .admin-table th {
   text-align: left;
   font-size: 0.75rem;

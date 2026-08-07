@@ -3,6 +3,13 @@
 // The key lives only in Netlify's environment variables — it is never sent to
 // the browser (site/index.html only ever calls this function's URL).
 //
+// Writes land in three tables: `leads` (one row per submission, plus the
+// PACE score rollup for quick reference), `sign_responses` (one row per
+// "Signs you may need our help" question, selected true/false — the full
+// set, not just the ones picked) and `assessment_responses` (one row per
+// self-assessment question with its exact 1-5 answer). Normalising the
+// per-question detail like this means nothing is lost to a summary.
+//
 // After a successful insert, also emails a formatted notification via Resend
 // (if configured) so a submission can be read and actioned without opening
 // Supabase directly. Email sending is best-effort: a Resend failure never
@@ -28,8 +35,10 @@ const SERVICE_INTEREST_LABELS = {
   frameworks: "QuotaSuccess Frameworks"
 };
 const PACE_DOMAIN_LABELS = { position: "Position", acquire: "Acquire", convert: "Convert", expand: "Expand" };
-const MAX_SYMPTOMS = 40;
-const MAX_SYMPTOM_TEXT_LENGTH = 300;
+const MAX_SIGN_RESPONSES = 60;
+const MAX_ASSESSMENT_RESPONSES = 40;
+const MAX_QUESTION_TEXT_LENGTH = 300;
+const MAX_QUESTION_KEY_LENGTH = 100;
 
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 5);
 const RATE_LIMIT_WINDOW_MINUTES = Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 10);
@@ -101,19 +110,47 @@ function sanitizeServiceInterest(value) {
   return SERVICE_INTEREST_OPTIONS.has(value) ? value : null;
 }
 
-// Only well-formed {domain, text} pairs survive, domain restricted to the
-// four PACE keys and text length-capped, same "never trust the client"
-// posture as sanitizePaceScores. Anything else about an entry, or the whole
-// payload, is dropped rather than stored.
-function sanitizeSymptoms(input) {
-  if (!Array.isArray(input)) return null;
+function sanitizeQuestionKey(value) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, MAX_QUESTION_KEY_LENGTH) : null;
+}
+
+function sanitizeQuestionText(value) {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, MAX_QUESTION_TEXT_LENGTH) : null;
+}
+
+// Only well-formed {key, domain, text, selected} entries survive — every
+// field required, domain restricted to the four PACE keys, selected coerced
+// to a strict boolean. This is the full response set (selected AND not
+// selected), not just a filtered "what they picked" summary, so nothing
+// well-formed is dropped just because it was left unselected.
+function sanitizeSignResponses(input, leadId) {
+  if (!Array.isArray(input)) return [];
   const out = [];
-  for (const item of input.slice(0, MAX_SYMPTOMS)) {
+  for (const item of input.slice(0, MAX_SIGN_RESPONSES)) {
     if (!item || typeof item !== "object") continue;
+    const key = sanitizeQuestionKey(item.key);
     const domain = PACE_DOMAINS.includes(item.domain) ? item.domain : null;
-    const text = typeof item.text === "string" ? item.text.trim().slice(0, MAX_SYMPTOM_TEXT_LENGTH) : "";
-    if (!domain || !text) continue;
-    out.push({ domain, text });
+    const text = sanitizeQuestionText(item.text);
+    if (!key || !domain || !text || typeof item.selected !== "boolean") continue;
+    out.push({ lead_id: leadId, question_key: key, domain, question_text: text, selected: item.selected });
+  }
+  return out;
+}
+
+// Only well-formed {key, domain, text, value} entries survive, value
+// restricted to the assessment's 1-5 scale. Same "never trust the client"
+// posture as sanitizePaceScores.
+function sanitizeAssessmentResponses(input, leadId) {
+  if (!Array.isArray(input)) return [];
+  const out = [];
+  for (const item of input.slice(0, MAX_ASSESSMENT_RESPONSES)) {
+    if (!item || typeof item !== "object") continue;
+    const key = sanitizeQuestionKey(item.key);
+    const domain = PACE_DOMAINS.includes(item.domain) ? item.domain : null;
+    const text = sanitizeQuestionText(item.text);
+    const value = Number(item.value);
+    if (!key || !domain || !text || !Number.isInteger(value) || value < 1 || value > 5) continue;
+    out.push({ lead_id: leadId, question_key: key, domain, question_text: text, scale_value: value });
   }
   return out;
 }
@@ -124,7 +161,7 @@ function escapeHtml(value) {
   ));
 }
 
-function buildNotificationEmailHtml(row) {
+function buildNotificationEmailHtml(row, selectedSigns) {
   const sourceLabel = row.source === "assessment" ? "Self-assessment" : "General enquiry";
   const serviceLabel = row.service_interest ? SERVICE_INTEREST_LABELS[row.service_interest] : "Not specified";
 
@@ -137,13 +174,13 @@ function buildNotificationEmailHtml(row) {
         <td style="padding:4px 0;">${escapeHtml(row.pace_scores[d])}%</td>
       </tr>`;
     }).join("");
-    scoresBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">PACE scorecard</h3><table>${rows}</table>`;
+    scoresBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">PACE scorecard</h3><table>${rows}</table><p style="color:#5B6577; font-size:12px; margin:8px 0 0;">Full 16-question detail is in the admin dashboard.</p>`;
   }
 
   let symptomsBlock = "";
-  if (row.symptoms && row.symptoms.length) {
-    const items = row.symptoms.map((s) => `<li>[${PACE_DOMAIN_LABELS[s.domain] || s.domain}] ${escapeHtml(s.text)}</li>`).join("");
-    symptomsBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">Symptoms selected (${row.symptoms.length})</h3><ul style="margin:0; padding-left:20px;">${items}</ul>`;
+  if (selectedSigns.length) {
+    const items = selectedSigns.map((s) => `<li>[${PACE_DOMAIN_LABELS[s.domain] || s.domain}] ${escapeHtml(s.question_text)}</li>`).join("");
+    symptomsBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">Signs selected (${selectedSigns.length})</h3><ul style="margin:0; padding-left:20px;">${items}</ul>`;
   }
 
   return `
@@ -166,7 +203,7 @@ function buildNotificationEmailHtml(row) {
 // response) is logged and swallowed. The lead is already saved in Supabase
 // by the time this runs, so a broken notification should never turn into a
 // failed submission for the visitor.
-async function sendNotificationEmail(row) {
+async function sendNotificationEmail(row, selectedSigns) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
   const to = process.env.RESEND_TO;
@@ -191,7 +228,7 @@ async function sendNotificationEmail(row) {
         to: [to],
         reply_to: row.email,
         subject: `New QuotaSuccess lead — ${sourceLabel}${subjectDetail ? ` — ${subjectDetail}` : ""}`,
-        html: buildNotificationEmailHtml(row)
+        html: buildNotificationEmailHtml(row, selectedSigns)
       })
     });
     if (!response.ok) {
@@ -199,6 +236,30 @@ async function sendNotificationEmail(row) {
     }
   } catch (err) {
     console.error("Resend notification error", err);
+  }
+}
+
+// Best-effort child-table insert: the lead itself is already saved by the
+// time this runs, so a failure here (bad network blip, etc.) is logged and
+// swallowed rather than turning into a failed submission for the visitor.
+async function insertRows(supabaseUrl, serviceKey, table, rows) {
+  if (!rows.length) return;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: "return=minimal"
+      },
+      body: JSON.stringify(rows)
+    });
+    if (!response.ok) {
+      console.error(`Insert into ${table} failed`, response.status, await response.text());
+    }
+  } catch (err) {
+    console.error(`Insert into ${table} error`, err);
   }
 }
 
@@ -245,18 +306,19 @@ exports.handler = async function (event) {
     role: payload.role ? String(payload.role).slice(0, 200) : null,
     pace_scores: sanitizePaceScores(payload.pace_scores),
     pace_block: sanitizePaceBlock(payload.pace_block),
-    service_interest: sanitizeServiceInterest(payload.service_interest),
-    symptoms: sanitizeSymptoms(payload.symptoms)
+    service_interest: sanitizeServiceInterest(payload.service_interest)
   };
 
   try {
+    // return=representation so the generated id is available for the
+    // sign_responses / assessment_responses foreign keys below.
     const response = await fetch(`${supabaseUrl}/rest/v1/leads`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: serviceKey,
         Authorization: `Bearer ${serviceKey}`,
-        Prefer: "return=minimal"
+        Prefer: "return=representation"
       },
       body: JSON.stringify(row)
     });
@@ -266,8 +328,22 @@ exports.handler = async function (event) {
       return { statusCode: 502, body: JSON.stringify({ error: "Could not save lead", detail }) };
     }
 
-    // Best-effort — never blocks or fails the visitor's submission.
-    await sendNotificationEmail({ ...row, created_at: new Date().toISOString() });
+    const [inserted] = await response.json();
+    const leadId = inserted && inserted.id;
+
+    const signResponses = sanitizeSignResponses(payload.sign_responses, leadId);
+    const assessmentResponses = sanitizeAssessmentResponses(payload.assessment_responses, leadId);
+
+    if (leadId) {
+      // Best-effort — never blocks or fails the visitor's submission.
+      await Promise.all([
+        insertRows(supabaseUrl, serviceKey, "sign_responses", signResponses),
+        insertRows(supabaseUrl, serviceKey, "assessment_responses", assessmentResponses)
+      ]);
+
+      const selectedSigns = signResponses.filter((s) => s.selected);
+      await sendNotificationEmail({ ...row, created_at: inserted.created_at }, selectedSigns);
+    }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (err) {

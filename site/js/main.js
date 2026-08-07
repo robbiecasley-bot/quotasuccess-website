@@ -20,13 +20,15 @@
     });
   }
 
-  // Selected symptoms are tracked here (not scrolled to) so a submitted lead
-  // form can carry them along. Read fresh from the DOM at submit time via
-  // getSelectedSymptoms(). Selections are also mirrored into sessionStorage
-  // (see saveSelectedSymptoms/restoreSelectedSymptoms) so a reload between
-  // picking symptoms and submitting the assessment further down the page
-  // doesn't silently lose the selection.
-  const SYMPTOMS_STORAGE_KEY = "qs_selected_symptoms";
+  // Every "Signs you may need our help" question is tracked here — not just
+  // the selected ones — so the full response set (selected AND not
+  // selected) reaches the database, not a filtered summary. Read fresh from
+  // the DOM at submit time via getAllSignResponses(). Selected keys are
+  // also mirrored into sessionStorage (see saveSelectedSymptomKeys/
+  // restoreSelectedSymptomKeys) so a reload between picking symptoms and
+  // submitting the assessment further down the page doesn't lose the
+  // selection.
+  const SYMPTOMS_STORAGE_KEY = "qs_selected_symptom_keys";
 
   function symptomButtonText(btn) {
     // The button also contains a checkmark span (.symptom-item__mark); grab
@@ -36,36 +38,41 @@
     return (textEl ? textEl.textContent : btn.textContent).trim();
   }
 
-  function getSelectedSymptoms() {
-    return Array.from(document.querySelectorAll('.symptom-item[aria-pressed="true"]')).map((btn) => ({
+  // One entry per Signs question on the page, with whether it's currently
+  // selected — the shape submit-lead.js writes into sign_responses.
+  function getAllSignResponses() {
+    return Array.from(document.querySelectorAll(".symptom-item")).map((btn) => ({
+      key: btn.dataset.key || "",
       domain: btn.dataset.domain || "",
-      text: symptomButtonText(btn)
+      text: symptomButtonText(btn),
+      selected: btn.getAttribute("aria-pressed") === "true"
     }));
   }
 
-  function saveSelectedSymptoms() {
+  function saveSelectedSymptomKeys() {
     try {
-      sessionStorage.setItem(SYMPTOMS_STORAGE_KEY, JSON.stringify(getSelectedSymptoms()));
+      const keys = getAllSignResponses().filter((s) => s.selected).map((s) => s.key);
+      sessionStorage.setItem(SYMPTOMS_STORAGE_KEY, JSON.stringify(keys));
     } catch (err) {
       // sessionStorage can be unavailable (private browsing, storage full,
       // etc). Non-fatal — the selection just won't survive a reload.
     }
   }
 
-  function clearSavedSymptoms() {
+  function clearSavedSymptomKeys() {
     try {
       sessionStorage.removeItem(SYMPTOMS_STORAGE_KEY);
     } catch (err) {
-      // Non-fatal, see saveSelectedSymptoms.
+      // Non-fatal, see saveSelectedSymptomKeys.
     }
   }
 
-  function restoreSelectedSymptomTexts() {
+  function restoreSelectedSymptomKeys() {
     try {
       const raw = sessionStorage.getItem(SYMPTOMS_STORAGE_KEY);
       if (!raw) return new Set();
       const parsed = JSON.parse(raw);
-      return new Set(Array.isArray(parsed) ? parsed.map((s) => s && s.text).filter(Boolean) : []);
+      return new Set(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
     } catch (err) {
       return new Set();
     }
@@ -75,18 +82,18 @@
     const cta = document.getElementById("symptom-cta");
     const countEl = document.getElementById("symptom-cta-count");
     if (!cta || !countEl) return;
-    const count = getSelectedSymptoms().length;
+    const count = getAllSignResponses().filter((s) => s.selected).length;
     countEl.textContent = String(count);
     cta.hidden = count === 0;
   }
 
   function initSymptomTracking() {
-    const restoredTexts = restoreSelectedSymptomTexts();
+    const restoredKeys = restoreSelectedSymptomKeys();
 
     document.querySelectorAll(".symptom-item").forEach((btn) => {
       // Restore selection from an earlier page load in this tab, if any,
       // instead of always defaulting to unselected.
-      btn.setAttribute("aria-pressed", restoredTexts.has(symptomButtonText(btn)) ? "true" : "false");
+      btn.setAttribute("aria-pressed", restoredKeys.has(btn.dataset.key) ? "true" : "false");
 
       btn.addEventListener("click", function () {
         const alreadyPressed = btn.getAttribute("aria-pressed") === "true";
@@ -103,7 +110,7 @@
         // Selection is tracked for the CTA and for whichever lead form gets
         // submitted later; the page no longer jumps anywhere on click.
         updateSymptomCta();
-        saveSelectedSymptoms();
+        saveSelectedSymptomKeys();
       });
     });
 
@@ -116,7 +123,7 @@
     document.querySelectorAll('.symptom-item[aria-pressed="true"]').forEach((btn) => {
       btn.setAttribute("aria-pressed", "false");
     });
-    clearSavedSymptoms();
+    clearSavedSymptomKeys();
     updateSymptomCta();
   }
 
@@ -171,7 +178,7 @@
         email: email ? email.value.trim() : "",
         company: (form.querySelector('input[name="company"]') || {}).value || "",
         role: (form.querySelector('input[name="role"]') || {}).value || "",
-        symptoms: getSelectedSymptoms()
+        sign_responses: getAllSignResponses()
       };
 
       const serviceInterest = form.querySelector('select[name="service_interest"]');
@@ -179,8 +186,10 @@
 
       const paceScores = form.querySelector('input[name="pace_scores"]');
       const paceBlock = form.querySelector('input[name="pace_block"]');
+      const assessmentResponses = form.querySelector('input[name="assessment_responses"]');
       if (paceScores && paceScores.value) payload.pace_scores = JSON.parse(paceScores.value);
       if (paceBlock && paceBlock.value) payload.pace_block = paceBlock.value;
+      if (assessmentResponses && assessmentResponses.value) payload.assessment_responses = JSON.parse(assessmentResponses.value);
 
       try {
         await submitLead(form, payload);
