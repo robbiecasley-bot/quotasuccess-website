@@ -35,6 +35,7 @@ const SERVICE_INTEREST_LABELS = {
   frameworks: "QuotaSuccess Frameworks"
 };
 const PACE_DOMAIN_LABELS = { position: "Position", acquire: "Acquire", convert: "Convert", expand: "Expand" };
+const SCALE_LABELS = { 1: "Absent", 2: "Ad hoc", 3: "Defined", 4: "Repeatable", 5: "Optimised" };
 const MAX_SIGN_RESPONSES = 60;
 const MAX_ASSESSMENT_RESPONSES = 40;
 const MAX_QUESTION_TEXT_LENGTH = 300;
@@ -161,7 +162,7 @@ function escapeHtml(value) {
   ));
 }
 
-function buildNotificationEmailHtml(row, selectedSigns) {
+function buildNotificationEmailHtml(row, selectedSigns, assessmentResponses) {
   const sourceLabel = row.source === "assessment" ? "Self-assessment" : "General enquiry";
   const serviceLabel = row.service_interest ? SERVICE_INTEREST_LABELS[row.service_interest] : "Not specified";
 
@@ -174,13 +175,20 @@ function buildNotificationEmailHtml(row, selectedSigns) {
         <td style="padding:4px 0;">${escapeHtml(row.pace_scores[d])}%</td>
       </tr>`;
     }).join("");
-    scoresBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">PACE scorecard</h3><table>${rows}</table><p style="color:#5B6577; font-size:12px; margin:8px 0 0;">Full 16-question detail is in the admin dashboard.</p>`;
+    scoresBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">PACE scorecard</h3><table>${rows}</table>`;
   }
 
   let symptomsBlock = "";
   if (selectedSigns.length) {
     const items = selectedSigns.map((s) => `<li>[${PACE_DOMAIN_LABELS[s.domain] || s.domain}] ${escapeHtml(s.question_text)}</li>`).join("");
     symptomsBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">Signs selected (${selectedSigns.length})</h3><ul style="margin:0; padding-left:20px;">${items}</ul>`;
+  }
+
+  let answersBlock = "";
+  if (assessmentResponses && assessmentResponses.length) {
+    const ordered = assessmentResponses.slice().sort((a, b) => PACE_DOMAINS.indexOf(a.domain) - PACE_DOMAINS.indexOf(b.domain));
+    const items = ordered.map((a) => `<li>[${PACE_DOMAIN_LABELS[a.domain] || a.domain}] ${escapeHtml(a.question_text)} — <strong>${escapeHtml(SCALE_LABELS[a.scale_value] || a.scale_value)}</strong> (${escapeHtml(a.scale_value)}/5)</li>`).join("");
+    answersBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">Full self-assessment answers (${assessmentResponses.length})</h3><ul style="margin:0; padding-left:20px;">${items}</ul>`;
   }
 
   return `
@@ -194,6 +202,7 @@ function buildNotificationEmailHtml(row, selectedSigns) {
         <tr><td style="padding:4px 12px 4px 0; color:#5B6577;">Interested in</td><td style="padding:4px 0;">${escapeHtml(serviceLabel)}</td></tr>
       </table>
       ${scoresBlock}
+      ${answersBlock}
       ${symptomsBlock}
     </div>
   `;
@@ -203,7 +212,7 @@ function buildNotificationEmailHtml(row, selectedSigns) {
 // response) is logged and swallowed. The lead is already saved in Supabase
 // by the time this runs, so a broken notification should never turn into a
 // failed submission for the visitor.
-async function sendNotificationEmail(row, selectedSigns) {
+async function sendNotificationEmail(row, selectedSigns, assessmentResponses) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
   const to = process.env.RESEND_TO;
@@ -228,7 +237,7 @@ async function sendNotificationEmail(row, selectedSigns) {
         to: [to],
         reply_to: row.email,
         subject: `New QuotaSuccess lead — ${sourceLabel}${subjectDetail ? ` — ${subjectDetail}` : ""}`,
-        html: buildNotificationEmailHtml(row, selectedSigns)
+        html: buildNotificationEmailHtml(row, selectedSigns, assessmentResponses)
       })
     });
     if (!response.ok) {
@@ -342,7 +351,7 @@ exports.handler = async function (event) {
       ]);
 
       const selectedSigns = signResponses.filter((s) => s.selected);
-      await sendNotificationEmail({ ...row, created_at: inserted.created_at }, selectedSigns);
+      await sendNotificationEmail({ ...row, created_at: inserted.created_at }, selectedSigns, assessmentResponses);
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
