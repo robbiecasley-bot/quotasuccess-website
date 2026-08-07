@@ -22,18 +22,53 @@
 
   // Selected symptoms are tracked here (not scrolled to) so a submitted lead
   // form can carry them along. Read fresh from the DOM at submit time via
-  // getSelectedSymptoms(), so this array is really just used for the CTA count.
+  // getSelectedSymptoms(). Selections are also mirrored into sessionStorage
+  // (see saveSelectedSymptoms/restoreSelectedSymptoms) so a reload between
+  // picking symptoms and submitting the assessment further down the page
+  // doesn't silently lose the selection.
+  const SYMPTOMS_STORAGE_KEY = "qs_selected_symptoms";
+
+  function symptomButtonText(btn) {
+    // The button also contains a checkmark span (.symptom-item__mark); grab
+    // only the plain text span so stored/emailed symptom text doesn't get a
+    // stray "✓" glued onto the front of it.
+    const textEl = btn.querySelector('span:not(.symptom-item__mark)');
+    return (textEl ? textEl.textContent : btn.textContent).trim();
+  }
+
   function getSelectedSymptoms() {
-    return Array.from(document.querySelectorAll('.symptom-item[aria-pressed="true"]')).map((btn) => {
-      // The button also contains a checkmark span (.symptom-item__mark); grab
-      // only the plain text span so stored/emailed symptom text doesn't get a
-      // stray "✓" glued onto the front of it.
-      const textEl = btn.querySelector('span:not(.symptom-item__mark)');
-      return {
-        domain: btn.dataset.domain || "",
-        text: (textEl ? textEl.textContent : btn.textContent).trim()
-      };
-    });
+    return Array.from(document.querySelectorAll('.symptom-item[aria-pressed="true"]')).map((btn) => ({
+      domain: btn.dataset.domain || "",
+      text: symptomButtonText(btn)
+    }));
+  }
+
+  function saveSelectedSymptoms() {
+    try {
+      sessionStorage.setItem(SYMPTOMS_STORAGE_KEY, JSON.stringify(getSelectedSymptoms()));
+    } catch (err) {
+      // sessionStorage can be unavailable (private browsing, storage full,
+      // etc). Non-fatal — the selection just won't survive a reload.
+    }
+  }
+
+  function clearSavedSymptoms() {
+    try {
+      sessionStorage.removeItem(SYMPTOMS_STORAGE_KEY);
+    } catch (err) {
+      // Non-fatal, see saveSelectedSymptoms.
+    }
+  }
+
+  function restoreSelectedSymptomTexts() {
+    try {
+      const raw = sessionStorage.getItem(SYMPTOMS_STORAGE_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      return new Set(Array.isArray(parsed) ? parsed.map((s) => s && s.text).filter(Boolean) : []);
+    } catch (err) {
+      return new Set();
+    }
   }
 
   function updateSymptomCta() {
@@ -46,17 +81,21 @@
   }
 
   function initSymptomTracking() {
+    const restoredTexts = restoreSelectedSymptomTexts();
+
     document.querySelectorAll(".symptom-item").forEach((btn) => {
-      btn.setAttribute("aria-pressed", "false");
+      // Restore selection from an earlier page load in this tab, if any,
+      // instead of always defaulting to unselected.
+      btn.setAttribute("aria-pressed", restoredTexts.has(symptomButtonText(btn)) ? "true" : "false");
+
       btn.addEventListener("click", function () {
         const alreadyPressed = btn.getAttribute("aria-pressed") === "true";
         btn.setAttribute("aria-pressed", String(!alreadyPressed));
 
         if (window.trackEvent) {
-          const textEl = btn.querySelector('span:not(.symptom-item__mark)');
           window.trackEvent("symptom_click", {
             domain: btn.dataset.domain,
-            symptom: (textEl ? textEl.textContent : btn.textContent).trim(),
+            symptom: symptomButtonText(btn),
             selected: !alreadyPressed
           });
         }
@@ -64,8 +103,21 @@
         // Selection is tracked for the CTA and for whichever lead form gets
         // submitted later; the page no longer jumps anywhere on click.
         updateSymptomCta();
+        saveSelectedSymptoms();
       });
     });
+
+    // Reflect any restored selection in the CTA box immediately, rather
+    // than waiting for the next click.
+    updateSymptomCta();
+  }
+
+  function clearSymptomSelection() {
+    document.querySelectorAll('.symptom-item[aria-pressed="true"]').forEach((btn) => {
+      btn.setAttribute("aria-pressed", "false");
+    });
+    clearSavedSymptoms();
+    updateSymptomCta();
   }
 
   function setStatus(form, message, state) {
@@ -134,6 +186,7 @@
         await submitLead(form, payload);
         setStatus(form, "Thanks — we'll follow up personally, soon.", "success");
         form.reset();
+        clearSymptomSelection();
         if (window.trackEvent) {
           window.trackEvent("lead_submitted", { source: payload.source });
         }
