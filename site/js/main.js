@@ -39,11 +39,16 @@
   }
 
   // One entry per Signs question on the page, with whether it's currently
-  // selected — the shape submit-lead.js writes into sign_responses.
+  // selected — the shape submit-lead.js writes into sign_responses. The
+  // domain is lower-cased here because data-domain in the HTML is
+  // capitalised (e.g. "Convert", for the trackEvent/analytics label), but
+  // the server only accepts the lower-case PACE domain keys ("convert")
+  // used everywhere else (pace_scores, assessment_responses, the DB check
+  // constraint) — mismatched casing here silently drops every row.
   function getAllSignResponses() {
     return Array.from(document.querySelectorAll(".symptom-item")).map((btn) => ({
       key: btn.dataset.key || "",
-      domain: btn.dataset.domain || "",
+      domain: (btn.dataset.domain || "").toLowerCase(),
       text: symptomButtonText(btn),
       selected: btn.getAttribute("aria-pressed") === "true"
     }));
