@@ -11,10 +11,26 @@ create table if not exists leads (
   company text,
   role text,
   pace_scores jsonb,
-  pace_block text
+  pace_block text,
+  -- Array of {domain, text} selected in "Signs you may need our help" at
+  -- submission time. Sanitised server-side in submit-lead.js.
+  symptoms jsonb,
+  -- Which offering the visitor said they're most interested in. Sanitised
+  -- against an allow-list server-side in submit-lead.js.
+  service_interest text
 );
 
 alter table leads enable row level security;
+
+-- Lets the admin dashboard (site/admin.html) read leads via Supabase Auth
+-- (anon key + a logged-in session for this exact email) without ever
+-- exposing the service-role key client-side. No other policy exists on
+-- this table, so every other request (anonymous, or a different account)
+-- still sees nothing.
+create policy "admin can read leads" on leads
+  for select
+  to authenticated
+  using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
 
 -- Rate-limit bookkeeping for submit-lead.js. Logs every attempt (valid or
 -- not) by IP so a burst of requests can be throttled with a 429. Separate

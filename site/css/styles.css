@@ -280,6 +280,7 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
 .proof-strip .grid { text-align: center; }
 .proof-stat__figure { font-family: var(--font-display); font-size: 2rem; color: var(--ember-soft); font-weight: 700; }
 .proof-stat__label { font-size: 0.9rem; color: var(--text-muted-on-dark); margin-top: 0.25rem; }
+.proof-stat__source { font-size: 0.72rem; color: var(--text-muted-on-dark); opacity: 0.75; margin-top: 0.3rem; }
 
 /* ==========================================================================
    Symptoms checklist
@@ -321,6 +322,21 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   background: var(--sprint-orange);
   color: var(--white);
 }
+
+.symptom-cta {
+  margin-top: 1.5rem;
+  background: #FFF1E8;
+  border: 1px solid var(--sprint-orange);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.symptom-cta[hidden] { display: none; }
+.symptom-cta p { margin: 0; color: var(--ink-navy); font-size: 0.98rem; max-width: 52ch; }
 
 /* ==========================================================================
    PACE method cards
@@ -460,6 +476,37 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
 .service-card__price { font-size: 0.85rem; font-weight: 600; margin-top: 0.75rem; color: var(--ink-navy); }
 .service-card--highlight .service-card__price { color: var(--ember-soft); }
 
+/* Individual engagement catalogue, grouped by PACE domain */
+.engagement-catalogue { display: grid; gap: 2rem; }
+@media (min-width: 900px) { .engagement-catalogue { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.engagement-group h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pace-color, var(--ink-navy));
+  margin-bottom: 1rem;
+}
+.engagement-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.engagement-item {
+  background: var(--white);
+  border: 1px solid #E3E6EC;
+  border-left: 3px solid var(--pace-color, var(--sprint-orange));
+  border-radius: var(--radius-sm);
+  padding: 0.9rem 1.1rem;
+}
+.engagement-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--ink-navy);
+}
+.engagement-item__price { font-weight: 600; font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+.engagement-item p { margin: 0.35em 0 0; font-size: 0.88rem; color: var(--text-muted); }
+
 /* ==========================================================================
    How it works ladder
    ========================================================================== */
@@ -542,6 +589,15 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   font-weight: 700;
   margin: 0 auto;
 }
+.avatar-photo {
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto;
+  display: block;
+  box-shadow: var(--shadow-card);
+  background: var(--ink-navy);
+}
 
 /* ==========================================================================
    Footer
@@ -558,3 +614,82 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   line-height: 1.6;
 }
 .footer-note strong { color: var(--text-on-dark); }
+
+/* ==========================================================================
+   Admin dashboard (site/admin.html)
+   ========================================================================== */
+.admin-shell { min-height: 100vh; background: var(--paper); }
+.admin-bar {
+  background: var(--ink-navy);
+  color: var(--text-on-dark);
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-bar .logo-link span { color: var(--white); }
+.admin-login {
+  max-width: 380px;
+  margin: 10vh auto 0;
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 2rem;
+}
+.admin-login h1 { font-size: 1.4rem; margin-bottom: 0.25em; }
+.admin-login p { color: var(--text-muted); font-size: 0.95rem; }
+.admin-main { padding: 2rem 0 4rem; }
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.admin-toolbar__filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.admin-toolbar select {
+  padding: 0.5em 0.75em;
+  border-radius: var(--radius-sm);
+  border: 1px solid #C7CCD6;
+  font-family: inherit;
+  background: var(--white);
+}
+.admin-table-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow-x: auto;
+}
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 920px; }
+.admin-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.9rem 1rem;
+  border-bottom: 2px solid var(--mist);
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--mist);
+  vertical-align: top;
+}
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-pill {
+  display: inline-block;
+  padding: 0.2em 0.65em;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--mist);
+  color: var(--ink-navy);
+  white-space: nowrap;
+}
+.admin-pill--block { background: rgba(192, 97, 42, 0.15); color: var(--amber); }
+.admin-symptom-list { margin: 0; padding-left: 1.1em; font-size: 0.85rem; color: var(--text-muted); }
+.admin-symptom-list li { margin-bottom: 0.25em; }
+.admin-empty { padding: 3rem 1rem; text-align: center; color: var(--text-muted); }
+.admin-error { color: var(--amber); font-size: 0.9rem; margin-top: 0.75rem; }

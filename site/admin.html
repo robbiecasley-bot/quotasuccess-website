@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuotaSuccess — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="admin-shell">
+
+<div class="admin-bar">
+  <div class="wrap site-header__inner" style="padding:0;">
+    <a class="logo-link" href="#">
+      <img src="assets/logo-reversed.svg" alt="" width="28" height="28">
+      <span>QuotaSuccess admin</span>
+    </a>
+    <button type="button" class="btn btn--ghost btn--sm" id="sign-out-btn" hidden>Sign out</button>
+  </div>
+</div>
+
+<!--
+  This page never handles the Supabase service-role key. It logs in via
+  Supabase Auth using the public "anon" key (safe to expose in client code,
+  same as any Supabase project's anon key) and then reads the `leads` table
+  directly. The database itself, via a row-level security policy that only
+  matches robbie@quotasuccess.com.au, is what actually keeps this data
+  private — not the fact that this URL is unlisted. See ADMIN.md.
+-->
+
+<section id="login-view" class="admin-login">
+  <h1>Sign in</h1>
+  <p>Use the Supabase account created for this dashboard.</p>
+  <form id="login-form" novalidate>
+    <div style="margin-bottom:1rem;">
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" name="email" required autocomplete="email">
+    </div>
+    <div style="margin-bottom:1rem;">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" name="password" required autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn btn--primary" style="width:100%;">Sign in</button>
+    <p class="admin-error" id="login-error" role="alert"></p>
+  </form>
+</section>
+
+<main id="dashboard-view" class="admin-main" hidden>
+  <div class="wrap">
+    <div class="admin-toolbar">
+      <h1 style="margin:0; font-size:1.5rem;">Submissions</h1>
+      <div class="admin-toolbar__filters">
+        <select id="filter-source" aria-label="Filter by source">
+          <option value="">All sources</option>
+          <option value="lead_capture">General enquiry</option>
+          <option value="assessment">Self-assessment</option>
+        </select>
+        <select id="filter-service" aria-label="Filter by service interest">
+          <option value="">All interests</option>
+          <option value="not_sure">Not sure yet</option>
+          <option value="diagnostic">PACE Diagnostic</option>
+          <option value="fractional">Fractional</option>
+          <option value="engineering">Engineering</option>
+          <option value="training">Training</option>
+          <option value="frameworks">Frameworks</option>
+        </select>
+        <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">Refresh</button>
+      </div>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th>Role</th>
+            <th>Interested in</th>
+            <th>PACE block</th>
+            <th>Symptoms</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody"></tbody>
+      </table>
+      <div class="admin-empty" id="leads-empty" hidden>No submissions match this filter yet.</div>
+    </div>
+    <p class="admin-error" id="dashboard-error" role="alert"></p>
+  </div>
+</main>
+
+<script src="js/admin.js"></script>
+</body>
+</html>

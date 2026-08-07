@@ -2,10 +2,34 @@
 // writes them straight to Supabase via PostgREST, using the service-role key.
 // The key lives only in Netlify's environment variables — it is never sent to
 // the browser (site/index.html only ever calls this function's URL).
+//
+// After a successful insert, also emails a formatted notification via Resend
+// (if configured) so a submission can be read and actioned without opening
+// Supabase directly. Email sending is best-effort: a Resend failure never
+// fails the visitor's submission, it's only logged server-side.
 
 const ALLOWED_SOURCES = new Set(["assessment", "lead_capture"]);
 const PACE_DOMAINS = ["position", "acquire", "convert", "expand"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SERVICE_INTEREST_OPTIONS = new Set([
+  "not_sure",
+  "diagnostic",
+  "fractional",
+  "engineering",
+  "training",
+  "frameworks"
+]);
+const SERVICE_INTEREST_LABELS = {
+  not_sure: "Not sure yet / just the diagnostic",
+  diagnostic: "PACE Diagnostic",
+  fractional: "QuotaSuccess Fractional",
+  engineering: "QuotaSuccess Engineering",
+  training: "QuotaSuccess Training",
+  frameworks: "QuotaSuccess Frameworks"
+};
+const PACE_DOMAIN_LABELS = { position: "Position", acquire: "Acquire", convert: "Convert", expand: "Expand" };
+const MAX_SYMPTOMS = 40;
+const MAX_SYMPTOM_TEXT_LENGTH = 300;
 
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 5);
 const RATE_LIMIT_WINDOW_MINUTES = Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 10);
@@ -73,6 +97,111 @@ function sanitizePaceBlock(value) {
   return PACE_DOMAINS.includes(value) ? value : null;
 }
 
+function sanitizeServiceInterest(value) {
+  return SERVICE_INTEREST_OPTIONS.has(value) ? value : null;
+}
+
+// Only well-formed {domain, text} pairs survive, domain restricted to the
+// four PACE keys and text length-capped, same "never trust the client"
+// posture as sanitizePaceScores. Anything else about an entry, or the whole
+// payload, is dropped rather than stored.
+function sanitizeSymptoms(input) {
+  if (!Array.isArray(input)) return null;
+  const out = [];
+  for (const item of input.slice(0, MAX_SYMPTOMS)) {
+    if (!item || typeof item !== "object") continue;
+    const domain = PACE_DOMAINS.includes(item.domain) ? item.domain : null;
+    const text = typeof item.text === "string" ? item.text.trim().slice(0, MAX_SYMPTOM_TEXT_LENGTH) : "";
+    if (!domain || !text) continue;
+    out.push({ domain, text });
+  }
+  return out;
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
+  ));
+}
+
+function buildNotificationEmailHtml(row) {
+  const sourceLabel = row.source === "assessment" ? "Self-assessment" : "General enquiry";
+  const serviceLabel = row.service_interest ? SERVICE_INTEREST_LABELS[row.service_interest] : "Not specified";
+
+  let scoresBlock = "";
+  if (row.pace_scores) {
+    const rows = PACE_DOMAINS.map((d) => {
+      const isBlock = d === row.pace_block;
+      return `<tr>
+        <td style="padding:4px 12px 4px 0; ${isBlock ? "font-weight:bold; color:#C0612A;" : ""}">${PACE_DOMAIN_LABELS[d]}${isBlock ? " (the block)" : ""}</td>
+        <td style="padding:4px 0;">${escapeHtml(row.pace_scores[d])}%</td>
+      </tr>`;
+    }).join("");
+    scoresBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">PACE scorecard</h3><table>${rows}</table>`;
+  }
+
+  let symptomsBlock = "";
+  if (row.symptoms && row.symptoms.length) {
+    const items = row.symptoms.map((s) => `<li>[${PACE_DOMAIN_LABELS[s.domain] || s.domain}] ${escapeHtml(s.text)}</li>`).join("");
+    symptomsBlock = `<h3 style="margin:20px 0 8px; font-size:15px;">Symptoms selected (${row.symptoms.length})</h3><ul style="margin:0; padding-left:20px;">${items}</ul>`;
+  }
+
+  return `
+    <div style="font-family:Arial,Helvetica,sans-serif; color:#0C1A2E; font-size:14px; line-height:1.5;">
+      <h2 style="margin:0 0 4px;">New ${escapeHtml(sourceLabel)} submission</h2>
+      <p style="color:#5B6577; margin:0 0 20px;">${new Date(row.created_at || Date.now()).toLocaleString("en-AU", { timeZone: "Australia/Sydney" })} (Sydney time)</p>
+      <table style="border-collapse:collapse;">
+        <tr><td style="padding:4px 12px 4px 0; color:#5B6577;">Email</td><td style="padding:4px 0;"><strong>${escapeHtml(row.email)}</strong></td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#5B6577;">Company</td><td style="padding:4px 0;">${escapeHtml(row.company || "—")}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#5B6577;">Role</td><td style="padding:4px 0;">${escapeHtml(row.role || "—")}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0; color:#5B6577;">Interested in</td><td style="padding:4px 0;">${escapeHtml(serviceLabel)}</td></tr>
+      </table>
+      ${scoresBlock}
+      ${symptomsBlock}
+    </div>
+  `;
+}
+
+// Best-effort only: a Resend failure (missing config, network error, bad
+// response) is logged and swallowed. The lead is already saved in Supabase
+// by the time this runs, so a broken notification should never turn into a
+// failed submission for the visitor.
+async function sendNotificationEmail(row) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM;
+  const to = process.env.RESEND_TO;
+  if (!apiKey || !from || !to) return;
+
+  const sourceLabel = row.source === "assessment" ? "Self-assessment" : "General enquiry";
+  const subjectDetail = row.service_interest
+    ? SERVICE_INTEREST_LABELS[row.service_interest]
+    : row.pace_block
+      ? `${PACE_DOMAIN_LABELS[row.pace_block]} is the block`
+      : "";
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        reply_to: row.email,
+        subject: `New QuotaSuccess lead — ${sourceLabel}${subjectDetail ? ` — ${subjectDetail}` : ""}`,
+        html: buildNotificationEmailHtml(row)
+      })
+    });
+    if (!response.ok) {
+      console.error("Resend notification failed", response.status, await response.text());
+    }
+  } catch (err) {
+    console.error("Resend notification error", err);
+  }
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method not allowed" };
@@ -115,7 +244,9 @@ exports.handler = async function (event) {
     company: payload.company ? String(payload.company).slice(0, 200) : null,
     role: payload.role ? String(payload.role).slice(0, 200) : null,
     pace_scores: sanitizePaceScores(payload.pace_scores),
-    pace_block: sanitizePaceBlock(payload.pace_block)
+    pace_block: sanitizePaceBlock(payload.pace_block),
+    service_interest: sanitizeServiceInterest(payload.service_interest),
+    symptoms: sanitizeSymptoms(payload.symptoms)
   };
 
   try {
@@ -134,6 +265,9 @@ exports.handler = async function (event) {
       const detail = await response.text();
       return { statusCode: 502, body: JSON.stringify({ error: "Could not save lead", detail }) };
     }
+
+    // Best-effort — never blocks or fails the visitor's submission.
+    await sendNotificationEmail({ ...row, created_at: new Date().toISOString() });
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
   } catch (err) {
