@@ -24,10 +24,16 @@
   // form can carry them along. Read fresh from the DOM at submit time via
   // getSelectedSymptoms(), so this array is really just used for the CTA count.
   function getSelectedSymptoms() {
-    return Array.from(document.querySelectorAll('.symptom-item[aria-pressed="true"]')).map((btn) => ({
-      domain: btn.dataset.domain || "",
-      text: btn.textContent.trim()
-    }));
+    return Array.from(document.querySelectorAll('.symptom-item[aria-pressed="true"]')).map((btn) => {
+      // The button also contains a checkmark span (.symptom-item__mark); grab
+      // only the plain text span so stored/emailed symptom text doesn't get a
+      // stray "✓" glued onto the front of it.
+      const textEl = btn.querySelector('span:not(.symptom-item__mark)');
+      return {
+        domain: btn.dataset.domain || "",
+        text: (textEl ? textEl.textContent : btn.textContent).trim()
+      };
+    });
   }
 
   function updateSymptomCta() {
@@ -47,9 +53,10 @@
         btn.setAttribute("aria-pressed", String(!alreadyPressed));
 
         if (window.trackEvent) {
+          const textEl = btn.querySelector('span:not(.symptom-item__mark)');
           window.trackEvent("symptom_click", {
             domain: btn.dataset.domain,
-            symptom: btn.textContent.trim(),
+            symptom: (textEl ? textEl.textContent : btn.textContent).trim(),
             selected: !alreadyPressed
           });
         }
