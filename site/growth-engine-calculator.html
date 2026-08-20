@@ -217,7 +217,7 @@
             <label for="autoshare">Outreach run as personalised sequences</label>
             <div class="calc-input"><span class="calc-suffix">%</span>
               <input type="number" id="autoshare" value="50" min="0" max="90" step="5" inputmode="numeric"></div>
-            <span class="calc-hint">Email and LinkedIn sequences carrying the first touches, with a person stepping in only when someone replies.</span>
+            <span class="calc-hint">Email and LinkedIn sequences carry the first touches; a person steps in only once someone replies. This is a choice, not a requirement &mdash; set it to 0% to model outreach done entirely by hand.</span>
           </div>
 
           <div class="calc-field">
@@ -263,6 +263,8 @@
           </div>
 
           <p class="calc-flag" id="cov-flag" hidden></p>
+
+          <div class="calc-reality" id="reality"></div>
         </section>
 
         <!-- 02 -->
@@ -292,11 +294,7 @@
         <!-- 04 -->
         <section class="calc-act">
           <h2><span class="calc-act__num">04</span> What this means</h2>
-          <div class="calc-meaning">
-            <p id="mean-1"></p>
-            <p id="mean-2"></p>
-            <p id="mean-3"></p>
-          </div>
+          <div class="calc-meaning" id="meaning-body"></div>
         </section>
 
         <details class="calc-assumptions">
@@ -329,8 +327,8 @@
     <div class="wrap">
       <div class="section-head" style="margin: 0 auto 2rem; text-align:center;">
         <span class="eyebrow">Where to next</span>
-        <h2>Want these numbers pressure-tested?</h2>
-        <p>Send your details and we&rsquo;ll walk through your actual figures together, replace the assumptions with your real conversion data, and show you what the first campaigns would be. You&rsquo;ll hear from a person, not a sequence.</p>
+        <h2>Not sure which layer to start with?</h2>
+        <p>Send your details and we&rsquo;ll walk through your real figures together, replace the assumptions with your own conversion data, and tell you which change is worth making first. You&rsquo;ll hear from a person, not a sequence.</p>
       </div>
 
       <form id="lead-capture-form" class="lead-form lead-form--3col" style="max-width:760px; margin:0 auto;" novalidate>

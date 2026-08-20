@@ -114,6 +114,15 @@
     m.pipeReq = m.outbound * m.cov;
     m.oppsReq = m.pipeReq / m.deal;
 
+    // Required opportunities worked backwards through the user's own conversion
+    // rates to the number of contacts someone has to physically work. This is
+    // the figure that makes the capacity ceiling visible rather than asserted;
+    // it reconciles exactly with the headcount multiple in section 04.
+    m.meetingsReq = m.oppsReq / m.m2o;
+    m.engagedReq = m.meetingsReq / m.r2m;
+    m.reachedReq = m.engagedReq / m.eng;
+    m.contactsReq = m.reachedReq / m.acc;
+
     m.baseCapacity = m.people * m.perday * m.days;
     m.base = produce(m.baseCapacity, m.acc, m.eng, m.r2m, m.m2o, m.deal);
 
@@ -141,6 +150,8 @@
       " for outbound to deliver. Held at " + ratio(m.cov) +
       " coverage, that is the pipeline it has to originate.");
 
+    renderReality(m);
+
     // Coverage vs win rate sanity check.
     var covered = m.cov * m.win;
     var flag = document.getElementById("cov-flag");
@@ -162,12 +173,61 @@
     }
   }
 
+  // The comparison the rest of the page depends on: contacts the target
+  // demands, against contacts the team can physically work.
+  function renderReality(m) {
+    var node = document.getElementById("reality");
+    if (!node) return;
+
+    var capacityYear = m.baseCapacity * 12;
+
+    if (m.outbound <= 0) { node.hidden = true; return; }
+    node.hidden = false;
+
+    var figures =
+      '<div class="calc-reality__figures">' +
+        '<div class="calc-reality__fig"><span>Contacts the target demands</span><strong>' +
+          count(m.contactsReq) + "</strong></div>" +
+        '<div class="calc-reality__fig"><span>Contacts your team can work</span><strong>' +
+          count(capacityYear) + "</strong></div>" +
+        (capacityYear > 0 && m.contactsReq > capacityYear
+          ? '<div class="calc-reality__fig calc-reality__fig--gap"><span>Short by</span><strong>' +
+            one(m.contactsReq / capacityYear) + "\u00D7</strong></div>"
+          : "") +
+      "</div>";
+
+    var body;
+    if (capacityYear <= 0) {
+      body = "<p>To produce <strong>" + count(m.oppsReq) + " qualified opportunities</strong> at your own " +
+        "conversion rates, someone has to work about <strong>" + count(m.contactsReq) +
+        " contacts a year</strong>. Nobody is currently doing that work, so all of it has to come from " +
+        "somewhere you do not have today.</p>";
+    } else if (m.contactsReq <= capacityYear) {
+      body = "<p>To produce <strong>" + count(m.oppsReq) + " qualified opportunities</strong> at your own " +
+        "conversion rates, someone has to work about <strong>" + count(m.contactsReq) +
+        " contacts a year</strong>. Your team can work <strong>" + count(capacityYear) +
+        "</strong>, so capacity is not your constraint. What follows is about making each of those " +
+        "contacts worth more.</p>";
+    } else {
+      body = "<p>To produce <strong>" + count(m.oppsReq) + " qualified opportunities</strong> at your own " +
+        "conversion rates, someone has to work about <strong>" + count(m.contactsReq) +
+        " contacts a year</strong>. Your team can work <strong>" + count(capacityYear) +
+        "</strong>.</p>" +
+        "<p>That is the whole problem in one line. <strong class=\"calc-reality__gap\">" +
+        one(m.contactsReq / capacityYear) + " times more contacts than there are hours to work them.</strong> " +
+        "No amount of effort closes a gap that shape &mdash; it closes by making each contact worth more, " +
+        "and by lifting the ceiling on how many can be reached at all.</p>";
+    }
+
+    node.innerHTML = figures + body;
+  }
+
   function renderToday(m) {
     var rungs = [
       { l: "Contacts worked", s: count(m.baseCapacity) + " a month across " + one(m.people) + (m.people === 1 ? " person" : " people"), v: count(m.baseCapacity * 12) },
       { l: "Contacts actually reached", s: Math.round(m.acc * 100) + "% of contact data is accurate and current", v: count(m.base.reached) },
-      { l: "Contacts who engage", s: "at " + one(m.eng * 100) + "%", v: count(m.base.engaged) },
-      { l: "Discovery meetings held", s: "at " + Math.round(m.r2m * 100) + "%", v: count(m.base.meetings) },
+      { l: "Contacts who engage", s: one(m.eng * 100) + "% reply or start a conversation \u2014 not opens or clicks", v: count(m.base.engaged) },
+      { l: "Discovery meetings held", s: Math.round(m.r2m * 100) + "% of those conversations turn into a meeting", v: count(m.base.meetings) },
       { l: "Qualified opportunities", s: Math.round((1 - m.m2o) * 100) + "% of meetings qualify out", v: count(m.base.opps) },
       { l: "Pipeline produced", s: "per year, at " + money(m.deal) + " average deal value", v: money(m.base.value), final: true }
     ];
@@ -204,7 +264,9 @@
       { name: "Sharper targeting", cap: "ICP precision, segmentation, personalisation at scale", c: m.baseCapacity, a: m.acc, e: m.eng2, o: m.m2o },
       { name: "Better data", cap: "Waterfall enrichment and validation", c: m.baseCapacity, a: m.acc2, e: m.eng2, o: m.m2o },
       { name: "Playbooks and skill", cap: "Trigger-specific research, what to say, proof it worked", c: m.baseCapacity, a: m.acc2, e: m.eng2, o: m.m2o2 },
-      { name: "Sequenced volume", cap: "Sequences carry first touches, people handle replies", c: m.optCapacity, a: m.acc2, e: m.eng2, o: m.m2o2, cls: "calc-wf--total" }
+      m.autoshare > 0
+        ? { name: "Sequenced volume", cap: "Sequences carry first touches, people handle replies", c: m.optCapacity, a: m.acc2, e: m.eng2, o: m.m2o2, cls: "calc-wf--total" }
+        : { name: "Volume \u2014 not applied", cap: "You have set sequenced outreach to 0%, so reach stays capped at what your team can personally work", c: m.optCapacity, a: m.acc2, e: m.eng2, o: m.m2o2, cls: "calc-wf--off" }
     ];
 
     var values = layers.map(function (L) {
@@ -220,10 +282,15 @@
           '<span class="calc-wf__name">' + L.name + '<span class="calc-wf__cap">' + L.cap + "</span></span>" +
           "<span>" +
             '<span class="calc-wf__val">' + money(v) + "</span>" +
-            (delta !== null && delta > 0 ? ' <span class="calc-wf__delta">+' + money(delta) + "</span>" : "") +
+            (delta === null ? "" :
+              delta > 0 ? ' <span class="calc-wf__delta">+' + money(delta) + "</span>"
+                        : ' <span class="calc-wf__delta calc-wf__delta--none">no change</span>') +
           "</span>" +
         "</div>" +
-        '<div class="calc-wf__track"><div class="calc-wf__bar" style="width:' + (v / scale * 100) + '%"></div></div>' +
+        '<div class="calc-wf__track">' +
+          '<div class="calc-wf__bar" style="width:' + (v / scale * 100) + '%"></div>' +
+          '<div class="calc-wf__req" style="left:' + Math.min(m.pipeReq / scale * 100, 99.3) + '%"></div>' +
+        "</div>" +
         "</div>";
     }).join("");
 
@@ -239,38 +306,77 @@
     return values[values.length - 1];
   }
 
-  function renderMeaning(m, optimised) {
-    // Headcount needed to close the gap by effort alone, at today's productivity.
-    var oppsPerPerson = m.people > 0 ? m.base.opps / m.people : 0;
-    var peopleNeeded = oppsPerPerson > 0 ? m.oppsReq / oppsPerPerson : Infinity;
-    var extra = peopleNeeded - m.people;
+  // Month a conversation started today would book, given the cycle. Naming the
+  // actual month works at any cycle length; "next year's number" only holds
+  // for long ones.
+  function bookingMonth(monthsOut) {
+    var d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + Math.round(monthsOut));
+    return d.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
+  }
 
-    if (m.people > 0 && isFinite(peopleNeeded)) {
-      setHtml("mean-1",
-        "At today's productivity, one person generates about <strong>" + count(oppsPerPerson) +
-        " qualified opportunities a year</strong>. Hitting <strong>" + count(m.oppsReq) +
-        "</strong> by effort alone would take <strong>" + one(peopleNeeded) + " people</strong>" +
-        (extra > 0.1 ? " &mdash; roughly <strong>" + one(extra) + " more</strong> than you have." : "."));
-    } else {
-      setHtml("mean-1",
-        "With no one currently prospecting, every one of the <strong>" + count(m.oppsReq) +
-        " qualified opportunities</strong> this target needs has to come from somewhere new.");
+  function renderMeaning(m, optimised) {
+    // Pipeline from the three quality layers alone — no extra contacts, no
+    // change to how outreach is run. This is the number that gives someone
+    // permission to start small, so it is stated on its own.
+    var quality = produce(m.baseCapacity, m.acc2, m.eng2, m.r2m, m.m2o2, m.deal).value;
+    var covered = m.base.value >= m.pipeReq;
+    var html = "";
+
+    if (m.outbound <= 0) {
+      document.getElementById("meaning-body").innerHTML =
+        "<p>On these numbers, everything you need arrives without outbound. " +
+        "Nothing below applies until the growth target rises above what your existing " +
+        "channels already deliver.</p>";
+      return;
     }
 
-    var closes = optimised >= m.pipeReq;
-    setHtml("mean-2", closes
-      ? "The engineered version reaches <strong>" + money(optimised) +
-        "</strong> against the <strong>" + money(m.pipeReq) +
-        "</strong> required, with the team you already have. The constraint was never how hard people were working."
-      : "The engineered version reaches <strong>" + money(optimised) + "</strong>, which closes most of the gap but not all of it. The remainder is a genuine capacity or targeting decision, not something more effort will solve.");
+    /* --- opening line, branches on whether there is actually a gap --- */
+    html += covered
+      ? '<p class="calc-mean-lead">Your outbound already covers the target. What follows is how you protect it.</p>'
+      : '<p class="calc-mean-lead">Each layer multiplies the one before it. That is why the total is bigger than it looks.</p>';
 
-    var fast = m.cycle * (1 - m.compress);
-    setHtml("mean-3",
-      "Timing matters as much as volume. A conversation started today books revenue in about <strong>" +
-      one(m.cycle) + " months</strong>, so work not started this month cannot land inside this financial year. " +
-      "Targeting buyers already showing a trigger pulls that back to roughly <strong>" + one(fast) +
-      " months</strong>. Meanwhile the outbound requirement runs at <strong>" + money(m.outbound / 12) +
-      " of closed revenue a month</strong>, whether or not the engine is producing it.");
+    /* --- the three quality layers --- */
+    html += "<ul class=\"calc-mean-list\">" +
+      "<li><strong>Better targeting.</strong> More of the right people engage, because the message finally fits a problem they actually have.</li>" +
+      "<li><strong>Better data.</strong> The effort you already spend reaches a real person instead of a dead line or someone who left.</li>" +
+      "<li><strong>Better playbooks.</strong> Your team knows what triggered the lead, what to ask and where it has worked before, so more conversations survive first contact.</li>" +
+      "</ul>";
+
+    html += "<p>Each change is modest on its own. Stacked, the same <strong>" +
+      count(m.baseCapacity * 12) + " contacts</strong> a year produce <strong>" +
+      money(quality) + "</strong> instead of <strong>" + money(m.base.value) +
+      "</strong> \u2014 because you are not improving one step, you are improving every step a contact passes through.</p>";
+
+    /* --- capacity: the part that was doing the work unexplained --- */
+    if (m.autoshare > 0) {
+      html += "<p><strong>Volume comes last, not first.</strong> Your team can personally work about <strong>" +
+        count(m.baseCapacity) + " contacts a month</strong>. With sequences carrying the first touches and " +
+        "your people stepping in only once someone replies, the same team covers <strong>" +
+        count(m.optCapacity) + "</strong> \u2014 because their limit stops being how many they can contact " +
+        "and becomes how many reply. That takes the total to <strong>" + money(optimised) + "</strong>" +
+        (optimised >= m.pipeReq
+          ? " against the <strong>" + money(m.pipeReq) + "</strong> you need."
+          : ", which still leaves <strong>" + money(m.pipeReq - optimised) +
+            "</strong> to find from a larger team, a bigger average deal, or a smaller target.") +
+        " If sequenced outreach is not something your business would run, that ceiling has to be lifted " +
+        "by hiring instead &mdash; set the sequencing figure to 0% to see what that looks like.</p>";
+    } else {
+      html += "<p><strong>You have modelled this without sequenced outreach</strong>, so reach stays capped at what your " +
+        "team can personally work. The three changes above are what is available without altering how outreach runs. " +
+        "If that ceiling is the constraint, sequencing the first touches is the lever that removes it.</p>";
+    }
+
+    html += "<p class=\"calc-mean-note\">None of that requires a bigger team. It requires a better system.</p>";
+
+    /* --- timing, stated as a real date so it holds at any cycle length --- */
+    html += "<p>Your sales cycle is <strong>" + one(m.cycle) + " months</strong>, so a conversation started today " +
+      "books around <strong>" + bookingMonth(m.cycle) + "</strong>. Targeting buyers already showing a trigger pulls " +
+      "that forward to <strong>" + bookingMonth(m.cycle * (1 - m.compress)) + "</strong>. Every month you wait moves " +
+      "the whole picture back by a month.</p>";
+
+    document.getElementById("meaning-body").innerHTML = html;
   }
 
   function calc() {

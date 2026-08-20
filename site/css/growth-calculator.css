@@ -236,3 +236,62 @@
 @media (prefers-reduced-motion: reduce) {
   .calc-verdict__fill, .calc-wf__bar { transition: none; }
 }
+
+/* ---------- Required marker on each waterfall track ---------- */
+.calc-wf__track { position: relative; }
+.calc-wf__req {
+  position: absolute; top: -2px; bottom: -2px; width: 0;
+  border-left: 2px dashed var(--ink-navy); opacity: 0.55;
+}
+.calc-wf--req .calc-wf__req { display: none; }
+
+/* ---------- What this means ---------- */
+.calc-mean-lead { font-size: 1.05rem; font-weight: 600; color: var(--ink-navy); }
+.calc-mean-list { margin: 0 0 1.1em; padding: 0; list-style: none; }
+.calc-mean-list li {
+  position: relative; padding-left: 1.4em; margin-bottom: 0.7em;
+  font-size: 0.98rem; line-height: 1.6; max-width: 74ch;
+}
+.calc-mean-list li:last-child { margin-bottom: 0; }
+.calc-mean-list li::before {
+  content: ""; position: absolute; left: 0; top: 0.62em;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--sprint-orange);
+}
+.calc-mean-list strong { color: var(--ink-navy); }
+.calc-mean-note {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: 1.05rem; color: var(--ink-navy);
+  padding-top: 0.9em; border-top: 1px solid var(--mist);
+}
+.calc-meaning p + .calc-mean-list { margin-top: -0.3em; }
+
+/* Last waterfall row when sequenced outreach is switched off: it adds nothing,
+   so it should not read as the highlighted total. */
+.calc-wf--off { background: var(--paper); }
+.calc-wf--off .calc-wf__bar { background: var(--text-muted); }
+.calc-wf__delta--none { color: var(--text-muted); font-weight: 500; }
+
+
+/* ---------- The capacity reality strip (section 01) ---------- */
+.calc-reality {
+  margin-top: 18px; padding: 20px 22px;
+  background: var(--ink-navy); color: var(--text-on-dark);
+  border-radius: var(--radius);
+}
+.calc-reality p { margin: 0; font-size: 1rem; line-height: 1.62; max-width: 74ch; }
+.calc-reality p + p { margin-top: 0.7em; }
+.calc-reality strong { color: var(--white); font-weight: 700; }
+.calc-reality .calc-reality__gap { color: var(--sprint-orange); }
+.calc-reality__figures {
+  display: flex; flex-wrap: wrap; gap: 26px; margin: 0 0 14px;
+  padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.14);
+}
+.calc-reality__fig { min-width: 0; }
+.calc-reality__fig span {
+  display: block; font-size: 0.72rem; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text-muted-on-dark); margin-bottom: 0.4em;
+}
+.calc-reality__fig strong {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1;
+}
+.calc-reality__fig--gap strong { color: var(--sprint-orange); }
