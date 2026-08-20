@@ -258,11 +258,14 @@
   }
 
   function renderWaterfall(m) {
-    // Layers applied in order; each row shows its own marginal contribution.
+    // Improvements applied in sequence; each row reports its marginal gain over
+    // the layer before it. "Required" is inserted after Today so the gap is
+    // stated before the fixes, but it is not part of the chain and never
+    // carries a delta.
     var layers = [
       { name: "Today", cap: "What your current setup produces", c: m.baseCapacity, a: m.acc, e: m.eng, o: m.m2o, cls: "calc-wf--base" },
       { name: "Sharper targeting", cap: "ICP precision, segmentation, personalisation at scale", c: m.baseCapacity, a: m.acc, e: m.eng2, o: m.m2o },
-      { name: "Better data", cap: "Waterfall enrichment and validation", c: m.baseCapacity, a: m.acc2, e: m.eng2, o: m.m2o },
+      { name: "Better data", cap: "Verified, fully researched contacts", c: m.baseCapacity, a: m.acc2, e: m.eng2, o: m.m2o },
       { name: "Playbooks and skill", cap: "Trigger-specific research, what to say, proof it worked", c: m.baseCapacity, a: m.acc2, e: m.eng2, o: m.m2o2 },
       m.autoshare > 0
         ? { name: "Sequenced volume", cap: "Sequences carry first touches, people handle replies", c: m.optCapacity, a: m.acc2, e: m.eng2, o: m.m2o2, cls: "calc-wf--total" }
@@ -274,33 +277,32 @@
     });
     var scale = Math.max(Math.max.apply(null, values), m.pipeReq, 1);
 
-    var html = layers.map(function (L, i) {
-      var v = values[i];
-      var delta = i === 0 ? null : v - values[i - 1];
-      return '<div class="calc-wf ' + (L.cls || "") + '">' +
-        '<div class="calc-wf__top">' +
-          '<span class="calc-wf__name">' + L.name + '<span class="calc-wf__cap">' + L.cap + "</span></span>" +
-          "<span>" +
-            '<span class="calc-wf__val">' + money(v) + "</span>" +
-            (delta === null ? "" :
-              delta > 0 ? ' <span class="calc-wf__delta">+' + money(delta) + "</span>"
-                        : ' <span class="calc-wf__delta calc-wf__delta--none">no change</span>') +
-          "</span>" +
-        "</div>" +
-        '<div class="calc-wf__track">' +
-          '<div class="calc-wf__bar" style="width:' + (v / scale * 100) + '%"></div>' +
-          '<div class="calc-wf__req" style="left:' + Math.min(m.pipeReq / scale * 100, 99.3) + '%"></div>' +
-        "</div>" +
+    function row(name, cap, value, delta, cls, isReq) {
+      var deltaHtml =
+        delta === null ? "" :
+        delta > 0 ? ' <span class="calc-wf__delta">+' + money(delta) + "</span>" :
+        delta < 0 ? ' <span class="calc-wf__delta calc-wf__delta--down">\u2212' + money(Math.abs(delta)) + "</span>" :
+                    ' <span class="calc-wf__delta calc-wf__delta--none">no change</span>';
+      return '<div class="calc-wf ' + (cls || "") + '">' +
+          '<div class="calc-wf__top">' +
+            '<span class="calc-wf__name">' + name + '<span class="calc-wf__cap">' + cap + "</span></span>" +
+            "<span>" + '<span class="calc-wf__val">' + money(value) + "</span>" + deltaHtml + "</span>" +
+          "</div>" +
+          '<div class="calc-wf__track">' +
+            '<div class="calc-wf__bar" style="width:' + (value / scale * 100) + '%"></div>' +
+            (isReq ? "" : '<div class="calc-wf__req" style="left:' + Math.min(m.pipeReq / scale * 100, 99.3) + '%"></div>') +
+          "</div>" +
         "</div>";
-    }).join("");
+    }
 
-    html += '<div class="calc-wf calc-wf--req">' +
-      '<div class="calc-wf__top">' +
-        '<span class="calc-wf__name">Required<span class="calc-wf__cap">Pipeline needed to deliver ' + money(m.outbound) + " of growth</span></span>" +
-        '<span class="calc-wf__val">' + money(m.pipeReq) + "</span>" +
-      "</div>" +
-      '<div class="calc-wf__track"><div class="calc-wf__bar" style="width:' + (m.pipeReq / scale * 100) + '%"></div></div>' +
-      "</div>";
+    var html = row(layers[0].name, layers[0].cap, values[0], null, layers[0].cls, false);
+
+    html += row("Required", "Pipeline needed to deliver " + money(m.outbound) + " of growth",
+                m.pipeReq, null, "calc-wf--req", true);
+
+    for (var i = 1; i < layers.length; i++) {
+      html += row(layers[i].name, layers[i].cap, values[i], values[i] - values[i - 1], layers[i].cls, false);
+    }
 
     document.getElementById("waterfall").innerHTML = html;
     return values[values.length - 1];
@@ -379,8 +381,41 @@
     document.getElementById("meaning-body").innerHTML = html;
   }
 
+  // The three "could reach" fields take an absolute rate, not an uplift. Showing
+  // today's figure inline is what stops someone entering "30" meaning a 30%
+  // improvement and unknowingly modelling a decline.
+  function renderBaselines(m) {
+    var rows = [
+      { id: "base-eng", now: one(m.eng * 100) + "%", opt: m.eng2, base: m.eng, label: "engagement" },
+      { id: "base-acc", now: Math.round(m.acc * 100) + "%", opt: m.acc2, base: m.acc, label: "data accuracy" },
+      { id: "base-m2o", now: Math.round(m.m2o * 100) + "%", opt: m.m2o2, base: m.m2o, label: "meeting-to-opportunity" }
+    ];
+    var below = [];
+    rows.forEach(function (r) {
+      var node = document.getElementById(r.id);
+      if (!node) return;
+      var lower = r.opt < r.base;
+      if (lower) below.push(r.label);
+      node.textContent = "Today: " + r.now + (lower ? " — this is lower" : "");
+      node.className = "calc-base" + (lower ? " calc-base--warn" : "");
+    });
+
+    var flag = document.getElementById("opt-flag");
+    if (!flag) return;
+    if (below.length) {
+      flag.hidden = false;
+      flag.innerHTML = "You have set " + below.join(", ") +
+        " <strong>below</strong> today's figure, so the layers below show a decline rather than a gain. " +
+        "These fields take the rate you expect to reach, not the size of the improvement — " +
+        "a 30% uplift on a 40% rate is <strong>52%</strong>, not 30%.";
+    } else {
+      flag.hidden = true;
+    }
+  }
+
   function calc() {
     var m = read();
+    renderBaselines(m);
     renderAimingFor(m);
     renderToday(m);
     var optimised = renderWaterfall(m);

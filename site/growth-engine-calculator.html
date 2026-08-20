@@ -190,27 +190,27 @@
 
         <fieldset class="calc-group">
           <legend><span class="calc-group__num">03</span> What an optimised engine changes</legend>
-          <p class="calc-group__note">Each figure below is a starting estimate, not a promise. Change any of them to what you think is realistic for your market &mdash; the results update as you type.</p>
+          <p class="calc-group__note">Enter the <strong>rate you think you could reach</strong>, not the size of the improvement. Each figure shows where you are today underneath it. These are starting estimates, not promises &mdash; change them to whatever is realistic for your market.</p>
 
           <div class="calc-field">
-            <label for="eng2">Engagement rate, with sharper targeting</label>
+            <label for="eng2">Engagement rate you could reach</label>
             <div class="calc-input"><span class="calc-suffix">%</span>
               <input type="number" id="eng2" value="3.5" min="0.1" max="100" step="0.1" inputmode="decimal"></div>
-            <span class="calc-hint">Tighter ICP, segment-specific angles, and personalisation that reads as researched rather than generated.</span>
+            <span class="calc-hint"><span class="calc-base" id="base-eng"></span>Tighter ICP, segment-specific angles, and personalisation that reads as researched rather than generated.</span>
           </div>
 
           <div class="calc-field">
-            <label for="acc2">Data accuracy, with proper sourcing</label>
+            <label for="acc2">Data accuracy you could reach</label>
             <div class="calc-input"><span class="calc-suffix">%</span>
               <input type="number" id="acc2" value="92" min="1" max="100" step="1" inputmode="numeric"></div>
-            <span class="calc-hint">Waterfall enrichment and validation across multiple providers rather than one stale list.</span>
+            <span class="calc-hint"><span class="calc-base" id="base-acc"></span>Fully researched, verified contacts instead of a stale list.</span>
           </div>
 
           <div class="calc-field">
-            <label for="m2o2">Meeting to opportunity, with playbooks</label>
+            <label for="m2o2">Meeting-to-opportunity rate you could reach</label>
             <div class="calc-input"><span class="calc-suffix">%</span>
               <input type="number" id="m2o2" value="55" min="1" max="100" step="1" inputmode="numeric"></div>
-            <span class="calc-hint">The seller knows what triggered the lead, what to ask, and where this has worked before.</span>
+            <span class="calc-hint"><span class="calc-base" id="base-m2o"></span>The seller knows what triggered the lead, what to ask, and where this has worked before.</span>
           </div>
 
           <div class="calc-field">
@@ -287,6 +287,7 @@
         <section class="calc-act">
           <h2><span class="calc-act__num">03</span> What closes the gap</h2>
           <p class="calc-act__note">No single change gets there. Each layer below builds on the one above it, and the volume gain at the bottom only pays off because the layers above it came first &mdash; sequencing a poorly targeted list at bad data quality just produces more of nothing.</p>
+          <p class="calc-flag calc-flag--warn" id="opt-flag" hidden></p>
 
           <div class="calc-waterfall" id="waterfall"></div>
         </section>

@@ -198,7 +198,14 @@
 .calc-wf--base .calc-wf__bar { background: var(--text-muted); }
 .calc-wf--total { background: var(--mist); }
 .calc-wf--total .calc-wf__bar { background: var(--sprint-orange); }
-.calc-wf--req .calc-wf__bar { background: var(--ink-navy); }
+/* Required sits directly under Today to frame the gap before the fixes, so it
+   needs to read as a reference line rather than another layer in the chain. */
+.calc-wf--req { background: var(--ink-navy); }
+.calc-wf--req .calc-wf__name { color: var(--white); }
+.calc-wf--req .calc-wf__cap { color: var(--text-muted-on-dark); }
+.calc-wf--req .calc-wf__val { color: var(--white); }
+.calc-wf--req .calc-wf__track { background: rgba(255,255,255,0.16); }
+.calc-wf--req .calc-wf__bar { background: var(--white); }
 
 /* Meaning */
 .calc-meaning {
@@ -295,3 +302,11 @@
   font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; line-height: 1;
 }
 .calc-reality__fig--gap strong { color: var(--sprint-orange); }
+
+/* Today's figure shown under each "could reach" field */
+.calc-base {
+  display: block; font-weight: 600; color: var(--text-body); margin-bottom: 0.2em;
+}
+.calc-base--warn { color: var(--amber); }
+.calc-wf__delta--down { color: var(--amber); }
+.calc-flag--warn { background: #FFF3EC; }
