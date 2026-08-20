@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Growth Engine Calculator — QuotaSuccess</title>
+<meta name="description" content="Work backwards from your growth target to the outbound activity it actually requires, and see what changes when targeting, data, playbooks and automation improve.">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Growth Engine Calculator — QuotaSuccess">
+<meta property="og:description" content="Work backwards from your growth target to the outbound activity it actually requires.">
+<meta property="og:site_name" content="QuotaSuccess">
+
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=satoshi@400,500,700&display=swap">
+
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/growth-calculator.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap site-header__inner">
+    <a class="logo-link" href="index.html#top">
+      <img src="assets/logo-reversed.svg" alt="" width="38" height="38">
+      <span>QuotaSuccess</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href="index.html#symptoms">Signs</a>
+      <a href="index.html#method">The method</a>
+      <a href="index.html#services">Services</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#assessment">Self-assessment</a>
+      <a href="growth-engine-calculator.html" aria-current="page">Calculator</a>
+    </nav>
+
+    <a class="btn btn--primary header-cta" href="#calculator-cta">Talk to us</a>
+
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="mobile-menu">Menu &#9776;</button>
+  </div>
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    <div class="wrap">
+      <ul>
+        <li><a href="index.html#symptoms">Signs</a></li>
+        <li><a href="index.html#method">The method</a></li>
+        <li><a href="index.html#services">Services</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="index.html#assessment">Self-assessment</a></li>
+        <li><a href="growth-engine-calculator.html">Calculator</a></li>
+        <li><a class="btn btn--primary" href="#calculator-cta">Talk to us</a></li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="calc-hero">
+    <div class="wrap">
+      <span class="eyebrow">Growth engine calculator</span>
+      <h1>Your growth target is a lag measure.<br>The activity underneath it is what you control.</h1>
+      <p class="calc-hero__sub">Put your own numbers in. This works forwards from what your outbound produces today, backwards from the growth you have to deliver, and shows you the distance between the two &mdash; then what closes it.</p>
+      <p class="calc-hero__meta">Nothing is sent anywhere until you choose to send it. Takes about three minutes.</p>
+    </div>
+  </section>
+
+  <!-- CALCULATOR -->
+  <section class="calc-section">
+    <div class="wrap calc-layout">
+
+      <!-- ============ INPUT RAIL ============ -->
+      <form class="calc-rail" id="calc-form" aria-label="Your numbers" novalidate>
+
+        <div class="calc-rail__head">
+          <h2>Your numbers</h2>
+          <button type="button" class="btn btn--ghost btn--sm" id="calc-reset">Reset</button>
+        </div>
+
+        <fieldset class="calc-group">
+          <legend><span class="calc-group__num">01</span> Where you&rsquo;re aiming</legend>
+
+          <div class="calc-field">
+            <label for="growth">Growth needed this year</label>
+            <div class="calc-input"><span class="calc-prefix">$</span>
+              <input type="number" id="growth" value="8000000" min="0" step="100000" inputmode="numeric"></div>
+            <span class="calc-hint">Revenue you need <em>above</em> last year&rsquo;s result, across new business, upsell and cross-sell. Annual.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="passive">Of that, how much arrives without outbound</label>
+            <div class="calc-input"><span class="calc-prefix">$</span>
+              <input type="number" id="passive" value="4800000" min="0" step="100000" inputmode="numeric"></div>
+            <span class="calc-hint">Renewals, organic inbound, referrals, partner and existing-relationship growth. Everything that would happen anyway. Annual.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="deal">Average deal value</label>
+            <div class="calc-input"><span class="calc-prefix">$</span>
+              <input type="number" id="deal" value="120000" min="1" step="5000" inputmode="numeric"></div>
+            <span class="calc-hint">Total contract value of a typical win. Larger deals mean fewer opportunities but usually a longer cycle.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="cov">Pipeline coverage you want to hold</label>
+            <select id="cov">
+              <option value="2">2:1</option>
+              <option value="2.5">2.5:1</option>
+              <option value="3">3:1</option>
+              <option value="3.5" selected>3.5:1</option>
+              <option value="4">4:1</option>
+              <option value="4.5">4.5:1</option>
+              <option value="5">5:1</option>
+              <option value="6">6:1</option>
+            </select>
+            <span class="calc-hint">Qualified pipeline as a multiple of the revenue it has to produce. The lower your win rate, the more you need.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="win">Win rate on qualified opportunities</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="win" value="25" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">Used to sanity-check whether the coverage ratio above is actually enough.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="cycle">Average sales cycle</label>
+            <div class="calc-input"><span class="calc-suffix">months</span>
+              <input type="number" id="cycle" value="9" min="1" max="36" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">First conversation to signature. This decides when work started today can actually book.</span>
+          </div>
+        </fieldset>
+
+        <fieldset class="calc-group">
+          <legend><span class="calc-group__num">02</span> What outbound does today</legend>
+
+          <div class="calc-field">
+            <label for="people">People doing outbound prospecting</label>
+            <div class="calc-input"><span class="calc-suffix">people</span>
+              <input type="number" id="people" value="1" min="0" max="200" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">Dedicated SDRs, or full-cycle sellers. If sellers run the whole cycle, count the fraction of their week that is genuinely prospecting &mdash; often nearer a fifth of a person than a whole one.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="perday">Contacts each can work per day</label>
+            <div class="calc-input"><span class="calc-suffix">each</span>
+              <input type="number" id="perday" value="30" min="1" max="500" step="5" inputmode="numeric"></div>
+            <span class="calc-hint">Researched, personalised and followed up properly &mdash; not names loaded into a sequence.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="days">Selling days per month</label>
+            <div class="calc-input"><span class="calc-suffix">days</span>
+              <input type="number" id="days" value="18" min="1" max="23" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">After meetings, admin, leave and everything else that isn&rsquo;t prospecting.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="acc">Contact data that is accurate and current</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="acc" value="70" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">Wrong numbers, dead addresses and people who left are capacity spent for nothing.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="eng">Contacts reached who engage</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="eng" value="2" min="0.1" max="100" step="0.1" inputmode="decimal"></div>
+            <span class="calc-hint">A real reply or conversation, not an open or a click. Relevance moves this far more than volume does.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="r2m">Engaged contacts who take a meeting</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="r2m" value="50" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">Interest converting into a discovery conversation actually held.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="m2o">Meetings that become real opportunities</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="m2o" value="40" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">The rest qualify out. Every meeting that dies here was paid for in full and returned nothing, which is why this is usually cheaper to fix than buying more volume.</span>
+          </div>
+        </fieldset>
+
+        <fieldset class="calc-group">
+          <legend><span class="calc-group__num">03</span> What an optimised engine changes</legend>
+          <p class="calc-group__note">Each figure below is a starting estimate, not a promise. Change any of them to what you think is realistic for your market &mdash; the results update as you type.</p>
+
+          <div class="calc-field">
+            <label for="eng2">Engagement rate, with sharper targeting</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="eng2" value="3.5" min="0.1" max="100" step="0.1" inputmode="decimal"></div>
+            <span class="calc-hint">Tighter ICP, segment-specific angles, and personalisation that reads as researched rather than generated.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="acc2">Data accuracy, with proper sourcing</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="acc2" value="92" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">Waterfall enrichment and validation across multiple providers rather than one stale list.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="m2o2">Meeting to opportunity, with playbooks</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="m2o2" value="55" min="1" max="100" step="1" inputmode="numeric"></div>
+            <span class="calc-hint">The seller knows what triggered the lead, what to ask, and where this has worked before.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="autoshare">Outreach run as personalised sequences</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="autoshare" value="50" min="0" max="90" step="5" inputmode="numeric"></div>
+            <span class="calc-hint">Email and LinkedIn sequences carrying the first touches, with a person stepping in only when someone replies.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="replies">Replies one person can handle per month</label>
+            <div class="calc-input"><span class="calc-suffix">each</span>
+              <input type="number" id="replies" value="50" min="1" max="500" step="5" inputmode="numeric"></div>
+            <span class="calc-hint">This is what sets the ceiling once sequences carry the volume. Your people stop being limited by how many they can contact, and start being limited by how many reply.</span>
+          </div>
+
+          <div class="calc-field">
+            <label for="compress">Cycle compression from signal-led targeting</label>
+            <div class="calc-input"><span class="calc-suffix">%</span>
+              <input type="number" id="compress" value="30" min="0" max="80" step="5" inputmode="numeric"></div>
+            <span class="calc-hint">Buyers found on a trigger are already part-way through their own process, so you join it late rather than starting it.</span>
+          </div>
+        </fieldset>
+      </form>
+
+      <!-- ============ RESULTS ============ -->
+      <div class="calc-results" aria-live="polite">
+
+        <!-- 01 -->
+        <section class="calc-act">
+          <h2><span class="calc-act__num">01</span> What outbound actually has to deliver</h2>
+          <p class="calc-act__note" id="note-1">Your growth target, less everything that arrives without outbound, is the number outbound is responsible for. Held at your coverage ratio, that sets the pipeline it has to originate.</p>
+
+          <div class="calc-cells">
+            <div class="calc-cell">
+              <div class="calc-cell__k">Outbound must deliver</div>
+              <div class="calc-cell__v" id="v-outbound">$3.2m</div>
+              <div class="calc-cell__n" id="n-outbound">per year &middot; $800k per quarter</div>
+            </div>
+            <div class="calc-cell">
+              <div class="calc-cell__k">Pipeline required</div>
+              <div class="calc-cell__v" id="v-pipereq">$11.2m</div>
+              <div class="calc-cell__n" id="n-pipereq">at 3.5:1 coverage</div>
+            </div>
+            <div class="calc-cell">
+              <div class="calc-cell__k">Opportunities required</div>
+              <div class="calc-cell__v" id="v-oppsreq">93</div>
+              <div class="calc-cell__n">per year, at your average deal value</div>
+            </div>
+          </div>
+
+          <p class="calc-flag" id="cov-flag" hidden></p>
+        </section>
+
+        <!-- 02 -->
+        <section class="calc-act">
+          <h2><span class="calc-act__num">02</span> What today&rsquo;s outbound produces</h2>
+          <p class="calc-act__note" id="note-2">This runs forwards from the people you have and what they can realistically work, through your own conversion rates, to the pipeline that comes out the other end.</p>
+
+          <div class="calc-ladder" id="ladder"></div>
+
+          <div class="calc-verdict" id="verdict">
+            <div class="calc-verdict__bar">
+              <div class="calc-verdict__fill" id="verdict-fill" style="width:19%"></div>
+              <div class="calc-verdict__marker"><span>Required</span></div>
+            </div>
+            <p id="verdict-text"></p>
+          </div>
+        </section>
+
+        <!-- 03 -->
+        <section class="calc-act">
+          <h2><span class="calc-act__num">03</span> What closes the gap</h2>
+          <p class="calc-act__note">No single change gets there. Each layer below builds on the one above it, and the volume gain at the bottom only pays off because the layers above it came first &mdash; sequencing a poorly targeted list at bad data quality just produces more of nothing.</p>
+
+          <div class="calc-waterfall" id="waterfall"></div>
+        </section>
+
+        <!-- 04 -->
+        <section class="calc-act">
+          <h2><span class="calc-act__num">04</span> What this means</h2>
+          <div class="calc-meaning">
+            <p id="mean-1"></p>
+            <p id="mean-2"></p>
+            <p id="mean-3"></p>
+          </div>
+        </section>
+
+        <details class="calc-assumptions">
+          <summary>Where the starting numbers come from</summary>
+          <div class="calc-assumptions__body">
+            <table>
+              <thead><tr><th>Input</th><th>Default</th><th>Typical range</th><th>How solid</th></tr></thead>
+              <tbody>
+                <tr><td>Pipeline coverage ratio</td><td>3.5:1</td><td>3:1 &ndash; 4:1</td><td>Well established</td></tr>
+                <tr><td>Win rate, qualified opportunities</td><td>25%</td><td>15% &ndash; 35%</td><td>Well established</td></tr>
+                <tr><td>Average sales cycle, complex B2B</td><td>9 months</td><td>6 &ndash; 12 months</td><td>Well established</td></tr>
+                <tr><td>Contact data accuracy</td><td>70%</td><td>55% &ndash; 85%</td><td>Varies widely</td></tr>
+                <tr><td>Engagement rate, targeted outbound</td><td>2%</td><td>1% &ndash; 5%</td><td>Contested</td></tr>
+                <tr><td>Engaged to meeting held</td><td>50%</td><td>40% &ndash; 60%</td><td>Soft</td></tr>
+                <tr><td>Meeting to qualified opportunity</td><td>40%</td><td>30% &ndash; 50%</td><td>Soft</td></tr>
+                <tr><td>Contacts one person can work daily</td><td>30</td><td>20 &ndash; 50</td><td>Soft</td></tr>
+                <tr><td>Replies one person can handle monthly</td><td>50</td><td>40 &ndash; 100</td><td>Soft</td></tr>
+              </tbody>
+            </table>
+            <p class="calc-assumptions__note">These are planning assumptions, not benchmarks. Engagement and conversion rates in particular vary enormously by market, offer and channel, and most published averages come from vendors selling the thing being measured. Treat them as a starting position. Replacing them with your own actual conversion data is the first thing worth doing, because a model built on your numbers is the one your board will accept.</p>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="calculator-cta" class="section--dark">
+    <div class="wrap">
+      <div class="section-head" style="margin: 0 auto 2rem; text-align:center;">
+        <span class="eyebrow">Where to next</span>
+        <h2>Want these numbers pressure-tested?</h2>
+        <p>Send your details and we&rsquo;ll walk through your actual figures together, replace the assumptions with your real conversion data, and show you what the first campaigns would be. You&rsquo;ll hear from a person, not a sequence.</p>
+      </div>
+
+      <form id="lead-capture-form" class="lead-form lead-form--3col" style="max-width:760px; margin:0 auto;" novalidate>
+        <input type="hidden" name="source" value="lead_capture">
+        <div class="hp-field" aria-hidden="true">
+          <label for="calc-company-website">Leave this field empty</label>
+          <input type="text" id="calc-company-website" name="company_website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div>
+          <label for="calc-email">Email</label>
+          <input type="email" id="calc-email" name="email" required autocomplete="email">
+        </div>
+        <div>
+          <label for="calc-company">Company</label>
+          <input type="text" id="calc-company" name="company" autocomplete="organization">
+        </div>
+        <div>
+          <label for="calc-role">Role</label>
+          <input type="text" id="calc-role" name="role" autocomplete="organization-title">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="calc-service">What are you most interested in?</label>
+          <select id="calc-service" name="service_interest">
+            <option value="not_sure" selected>Not sure yet / just a conversation</option>
+            <option value="engineering">Building the outbound engine</option>
+            <option value="diagnostic">PACE Diagnostic</option>
+            <option value="fractional">Fractional GTM leadership</option>
+            <option value="training">Enablement and coaching</option>
+          </select>
+        </div>
+
+        <div class="lead-form__actions" style="grid-column: 1 / -1; justify-content:center;">
+          <button type="submit" class="btn btn--primary">Talk through my numbers</button>
+          <span class="lead-form__note">No obligation. No drip sequence.</span>
+        </div>
+        <p class="form-status" id="lead-capture-form-status" role="status" style="text-align:center; grid-column: 1 / -1;"></p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <a class="logo-link" href="index.html#top">
+        <img src="assets/logo-reversed.svg" alt="" width="28" height="28">
+        <span style="font-family:var(--font-display); font-weight:700; color:var(--white);">QuotaSuccess</span>
+      </a>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="index.html#symptoms">Signs</a>
+        <a href="index.html#method">The method</a>
+        <a href="index.html#services">Services</a>
+        <a href="index.html#about">About</a>
+        <a href="index.html#assessment">Self-assessment</a>
+        <a href="growth-engine-calculator.html">Calculator</a>
+        <a href="mailto:robbie@quotasuccess.com.au">robbie@quotasuccess.com.au</a>
+      </nav>
+    </div>
+
+    <p class="footer-note">
+      Trading as QuotaSuccess Pty Ltd. ABN 26 403 729 683.<br>
+      &copy; 2026 QuotaSuccess Pty Ltd. All rights reserved.
+    </p>
+  </div>
+</footer>
+
+<script src="js/analytics.js"></script>
+<script src="js/growth-calculator.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

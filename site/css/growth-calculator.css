@@ -1,0 +1,238 @@
+/* ==========================================================================
+   QuotaSuccess — Growth Engine Calculator
+   Uses the tokens defined in styles.css. Load this AFTER styles.css.
+   ========================================================================== */
+
+/* ---------- Hero ---------- */
+.calc-hero {
+  background: var(--ink-navy);
+  color: var(--text-on-dark);
+  padding: 48px 0 44px;
+}
+.calc-hero h1 {
+  color: var(--white);
+  font-size: 1.9rem;
+  max-width: 20ch;
+  margin-bottom: 0.8rem;
+}
+@media (min-width: 768px) { .calc-hero h1 { font-size: 2.6rem; max-width: 26ch; } }
+.calc-hero__sub {
+  color: var(--text-on-dark);
+  font-size: 1.05rem;
+  max-width: 62ch;
+  margin-bottom: 0.6rem;
+}
+.calc-hero__meta { color: var(--text-muted-on-dark); font-size: 0.9rem; margin: 0; }
+
+/* ---------- Layout ---------- */
+.calc-section { padding: 32px 0 56px; background: var(--paper); }
+.calc-layout { display: grid; grid-template-columns: 1fr; gap: 32px; align-items: start; }
+@media (min-width: 1000px) {
+  .calc-layout { grid-template-columns: 370px minmax(0, 1fr); gap: 40px; }
+}
+
+/* ---------- Input rail ---------- */
+.calc-rail {
+  background: var(--white);
+  border: 1px solid #DDE1E8;
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow-card);
+}
+@media (min-width: 1000px) {
+  .calc-rail { position: sticky; top: 84px; max-height: calc(100vh - 108px); overflow-y: auto; }
+}
+.calc-rail__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--mist);
+}
+.calc-rail__head h2 { margin: 0; font-size: 1.1rem; color: var(--ink-navy); }
+
+.calc-group { border: 0; padding: 0; margin: 0 0 26px; }
+.calc-group:last-of-type { margin-bottom: 0; }
+.calc-group legend {
+  display: flex; align-items: baseline; gap: 0.55em;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 0.72rem; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--text-muted); padding: 0; margin-bottom: 14px;
+}
+.calc-group__num { color: var(--sprint-orange); }
+.calc-group__note {
+  font-size: 0.82rem; color: var(--text-muted); margin: -6px 0 16px; line-height: 1.5;
+}
+
+.calc-field { margin-bottom: 16px; }
+.calc-field:last-child { margin-bottom: 0; }
+.calc-field label {
+  display: block; font-size: 0.85rem; font-weight: 600;
+  color: var(--ink-navy); margin-bottom: 0.4em;
+}
+.calc-input { position: relative; display: flex; align-items: center; }
+.calc-prefix, .calc-suffix {
+  position: absolute; font-size: 0.85rem; color: var(--text-muted); pointer-events: none;
+}
+.calc-prefix { left: 0.9em; }
+.calc-suffix { right: 0.9em; }
+.calc-field input[type="number"],
+.calc-field select {
+  width: 100%; padding: 0.7em 0.9em;
+  border-radius: var(--radius-sm); border: 1px solid #C7CCD6;
+  font-size: 1rem; font-family: inherit; font-weight: 500;
+  background: var(--white); color: var(--text-body);
+}
+/* These must out-specify `.calc-field input[type="number"]` above, whose
+   `padding` shorthand would otherwise reset the side padding and let the
+   prefix/suffix collide with the value. */
+.calc-field .calc-input input[type="number"] { padding-left: 2em; padding-right: 4.6em; }
+.calc-field .calc-input:not(:has(.calc-prefix)) input[type="number"] { padding-left: 0.9em; }
+.calc-field input::-webkit-outer-spin-button,
+.calc-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.calc-field input[type="number"] { -moz-appearance: textfield; }
+.calc-hint {
+  display: block; font-size: 0.78rem; color: var(--text-muted);
+  margin-top: 0.45em; line-height: 1.5;
+}
+.calc-hint em { font-style: italic; }
+
+/* ---------- Results ---------- */
+.calc-results { min-width: 0; }
+
+/* styles.css sets `section { padding: 64px 0 }` (96px above 900px). These
+   blocks are <section> elements inside the calculator layout, so that
+   padding has to be cancelled explicitly — otherwise the first block sits
+   96px below the top of the input rail and consecutive blocks are separated
+   by nearly 250px of dead space. */
+.calc-act { padding: 0; margin-bottom: 34px; }
+.calc-act:last-of-type { margin-bottom: 26px; }
+.calc-results > .calc-act:first-child { padding-top: 4px; }
+.calc-act h2 {
+  display: flex; align-items: baseline; gap: 0.6em;
+  font-size: 1.3rem; color: var(--ink-navy); margin-bottom: 0.5rem;
+}
+.calc-act__num {
+  font-size: 0.72rem; letter-spacing: 0.13em; color: var(--sprint-orange); font-weight: 700;
+}
+.calc-act__note {
+  color: var(--text-muted); font-size: 0.95rem; max-width: 72ch; margin-bottom: 1.25rem;
+}
+
+/* Headline cells */
+.calc-cells {
+  display: grid; grid-template-columns: 1fr; gap: 1px;
+  background: #DDE1E8; border: 1px solid #DDE1E8;
+  border-radius: var(--radius); overflow: hidden;
+}
+@media (min-width: 640px) { .calc-cells { grid-template-columns: repeat(3, 1fr); } }
+.calc-cell { background: var(--white); padding: 18px; }
+.calc-cell__k {
+  font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 0.55em;
+}
+.calc-cell__v {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.7rem;
+  color: var(--ink-navy); line-height: 1;
+}
+.calc-cell__n { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5em; }
+
+.calc-flag {
+  margin: 14px 0 0; padding: 12px 16px;
+  background: #FFF3EC; border-left: 3px solid var(--amber);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.88rem; color: var(--text-body);
+}
+.calc-flag[hidden] { display: none; }
+
+/* Ladder */
+.calc-ladder { border: 1px solid #DDE1E8; border-radius: var(--radius); overflow: hidden; background: var(--white); }
+.calc-rung {
+  display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center;
+  padding: 13px 18px; border-bottom: 1px solid var(--mist);
+}
+.calc-rung:last-child { border-bottom: none; }
+.calc-rung--final { background: var(--mist); }
+.calc-rung__l { font-size: 0.95rem; font-weight: 600; color: var(--ink-navy); }
+.calc-rung__s { display: block; font-size: 0.78rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; }
+.calc-rung__v {
+  font-family: var(--font-display); font-weight: 700; font-size: 1.15rem;
+  color: var(--ink-navy); text-align: right; white-space: nowrap;
+}
+.calc-rung--final .calc-rung__v { color: var(--sprint-orange); font-size: 1.35rem; }
+
+/* Verdict bar */
+.calc-verdict { margin-top: 20px; }
+.calc-verdict__bar {
+  position: relative; height: 34px; background: var(--mist);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+.calc-verdict__fill {
+  height: 100%; background: var(--ink-navy);
+  transition: width 0.35s ease; max-width: 100%;
+}
+.calc-verdict__marker {
+  position: absolute; top: 0; right: 0; height: 100%;
+  border-left: 2px dashed var(--sprint-orange);
+  display: flex; align-items: center;
+}
+.calc-verdict__marker span {
+  font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--sprint-orange); font-weight: 700; padding-left: 8px;
+  position: absolute; right: 8px; white-space: nowrap;
+}
+.calc-verdict p { margin: 12px 0 0; font-size: 0.98rem; color: var(--text-body); }
+.calc-verdict strong { color: var(--ink-navy); }
+
+/* Waterfall */
+.calc-waterfall { border: 1px solid #DDE1E8; border-radius: var(--radius); background: var(--white); padding: 6px 0; }
+.calc-wf {
+  display: grid; grid-template-columns: 1fr; gap: 6px;
+  padding: 12px 18px; border-bottom: 1px solid var(--mist);
+}
+.calc-wf:last-child { border-bottom: none; }
+.calc-wf__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.calc-wf__name { font-size: 0.92rem; font-weight: 600; color: var(--ink-navy); }
+.calc-wf__cap { display: block; font-size: 0.76rem; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
+.calc-wf__val { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--ink-navy); white-space: nowrap; }
+.calc-wf__delta { font-size: 0.78rem; color: var(--green); font-weight: 600; white-space: nowrap; }
+.calc-wf__track { height: 8px; background: var(--mist); border-radius: 4px; overflow: hidden; }
+.calc-wf__bar { height: 100%; border-radius: 4px; background: var(--teal); transition: width 0.35s ease; }
+.calc-wf--base .calc-wf__bar { background: var(--text-muted); }
+.calc-wf--total { background: var(--mist); }
+.calc-wf--total .calc-wf__bar { background: var(--sprint-orange); }
+.calc-wf--req .calc-wf__bar { background: var(--ink-navy); }
+
+/* Meaning */
+.calc-meaning {
+  border-left: 3px solid var(--sprint-orange); background: var(--white);
+  border-radius: 0 var(--radius) var(--radius) 0; padding: 20px 22px;
+  border-top: 1px solid #DDE1E8; border-right: 1px solid #DDE1E8; border-bottom: 1px solid #DDE1E8;
+}
+.calc-meaning p { margin: 0 0 0.85em; font-size: 1rem; line-height: 1.6; max-width: 74ch; }
+.calc-meaning p:last-child { margin-bottom: 0; }
+.calc-meaning strong { color: var(--ink-navy); font-weight: 700; }
+
+/* Assumptions */
+.calc-assumptions { border: 1px solid #DDE1E8; border-radius: var(--radius); background: var(--white); }
+.calc-assumptions summary {
+  padding: 15px 20px; cursor: pointer;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+}
+.calc-assumptions__body { padding: 0 20px 20px; }
+.calc-assumptions table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.calc-assumptions th, .calc-assumptions td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--mist); vertical-align: top;
+}
+.calc-assumptions th {
+  font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 700;
+}
+.calc-assumptions td { color: var(--text-muted); }
+.calc-assumptions td:first-child { color: var(--text-body); }
+.calc-assumptions__note {
+  font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;
+  margin: 14px 0 0; max-width: 80ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calc-verdict__fill, .calc-wf__bar { transition: none; }
+}

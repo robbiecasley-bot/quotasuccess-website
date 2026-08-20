@@ -182,7 +182,7 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   padding: 14px 0;
 }
 .logo-link { display: flex; align-items: center; gap: 0.6em; text-decoration: none; color: var(--white); }
-.logo-link span { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.01em; }
+.logo-link span { font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; letter-spacing: -0.005em; }
 
 .site-nav {
   display: none;
