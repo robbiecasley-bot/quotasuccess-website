@@ -1,8 +1,9 @@
 -- QuotaSuccess lead capture schema.
--- Written to exclusively by netlify/functions/submit-lead.js using the
--- service-role key. RLS is enabled on every table with no public policies,
--- so the anon/public key (used client-side by site/js/admin.js) can only
--- ever read, never write, and only once signed in as the one admin account.
+-- New rows are written exclusively by netlify/functions/submit-lead.js using
+-- the service-role key. RLS is enabled on every table with no public
+-- policies, so the anon/public key (used client-side by site/js/admin.js)
+-- can only read and delete existing rows, never insert, and only once signed
+-- in as the one admin account (robbie@quotasuccess.com.au).
 --
 -- Shape: `leads` is one row per submission (email, company, role, the
 -- offering they said they're interested in, and a PACE score rollup for
@@ -41,6 +42,16 @@ create policy "admin can read leads" on leads
   to authenticated
   using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
 
+-- Lets the admin dashboard's Delete button remove a submission. Deleting a
+-- leads row cascades to its sign_responses/assessment_responses rows
+-- automatically (see the "on delete cascade" foreign keys below) -- but that
+-- cascade is itself subject to RLS on those child tables, so the matching
+-- delete policies further down are required too, not optional.
+create policy "admin can delete leads" on leads
+  for delete
+  to authenticated
+  using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+
 -- One row per "Signs you may need our help" question, per submission —
 -- selected true/false for every question shown, not just the ones picked.
 -- question_key is a stable slug (see the data-key attributes in
@@ -66,6 +77,15 @@ create policy "admin can read sign_responses" on sign_responses
   to authenticated
   using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
 
+-- Required for the leads delete above to cascade successfully -- without
+-- this, deleting a leads row that still has sign_responses children fails
+-- with a permission error, since the cascade delete on the child table is
+-- itself evaluated under RLS.
+create policy "admin can delete sign_responses" on sign_responses
+  for delete
+  to authenticated
+  using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+
 -- One row per self-assessment question, per submission, with the exact
 -- 1-5 answer given (1 = Absent .. 5 = Optimised). leads.pace_scores /
 -- leads.pace_block keep the domain rollup for quick reference; this table
@@ -86,6 +106,12 @@ create index if not exists assessment_responses_lead_id_idx on assessment_respon
 
 create policy "admin can read assessment_responses" on assessment_responses
   for select
+  to authenticated
+  using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+
+-- Same reason as the sign_responses delete policy above.
+create policy "admin can delete assessment_responses" on assessment_responses
+  for delete
   to authenticated
   using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
 

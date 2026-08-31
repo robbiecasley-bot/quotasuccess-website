@@ -24,14 +24,39 @@ That's it — no code changes needed, no redeploy needed. You can log in immedia
 
 **To reset the password later:** in the same Authentication → Users screen, click on your user, and there's a "Send password recovery" or "Reset password" option, or you can just delete and recreate the user with a new password.
 
+## One more one-time setup step: enabling Delete
+
+The database originally only let your login *read* the data, not remove it. To turn on the Delete button in the dashboard:
+
+1. Go to the Supabase dashboard → **SQL Editor** → **New query**.
+2. Paste and run:
+   ```sql
+   create policy "admin can delete leads" on leads
+     for delete to authenticated
+     using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+
+   create policy "admin can delete sign_responses" on sign_responses
+     for delete to authenticated
+     using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+
+   create policy "admin can delete assessment_responses" on assessment_responses
+     for delete to authenticated
+     using (auth.jwt() ->> 'email' = 'robbie@quotasuccess.com.au');
+   ```
+3. That's it — no redeploy needed, the Delete button works immediately once these run. (`supabase/schema.sql` in the repo already reflects this as the source of truth, so a brand-new project set up from that file in future won't need this extra step.)
+
+Until you run this, clicking Delete will fail with a clear error rather than silently doing nothing.
+
 ## Using the dashboard day-to-day
 
 1. Go to `/admin.html` on the live site.
 2. Sign in with the email and password from setup.
 3. You'll see a table of every submission, newest first: date, source (general enquiry vs. self-assessment), email, company, role, what they said they're interested in, their PACE "block" (if they completed the assessment), which of the 24 "Signs" questions they selected (click "N selected" to expand the list, showing only the ones they picked), and — for a completed self-assessment — every one of the 16 individual questions with its exact answer (click "16 answers" to expand: e.g. "[Convert] Our forecast is built on tracked lead and lag measures, not gut feel. — Ad hoc (2/5)"). Nothing about a submission is only available as a rolled-up summary; the full detail behind every score is there if you want it.
 4. Use the two dropdown filters at the top to narrow the list — by source, or by which service they're interested in. This is the fastest way to see, for example, only the people who said they want the "Fractional" service.
-5. Click **Refresh** to pull in anything submitted since you opened the page.
-6. Click **Sign out** when you're done, especially on a shared or public computer — the session isn't saved anywhere, so closing the browser tab also effectively signs you out.
+5. Click **Download CSV** to export exactly what's currently on screen (it respects the two filters — filter to "Fractional" first if you only want those). Opens straight in Excel/Sheets; the Signs and assessment-answer columns are the same detail as the expandable lists, just flattened into one cell each.
+6. Click **Delete** on a row to remove that submission permanently. You'll get a confirmation popup naming the email first — there's no undo after that, so read it before confirming. Deleting a lead also removes its Signs and assessment-answer detail automatically (they're stored as child rows tied to it).
+7. Click **Refresh** to pull in anything submitted since you opened the page.
+8. Click **Sign out** when you're done, especially on a shared or public computer — the session isn't saved anywhere, so closing the browser tab also effectively signs you out.
 
 ## If something looks wrong
 

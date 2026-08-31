@@ -66,6 +66,29 @@
     return response.json();
   }
 
+  // Deleting the leads row cascades to its sign_responses/assessment_responses
+  // rows automatically (ON DELETE CASCADE in the schema). Requires the delete
+  // RLS policies from supabase/schema.sql to be applied — without them this
+  // returns 403/empty and nothing is removed, which the caller surfaces.
+  async function deleteLead(id) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${id}`, {
+      method: "DELETE",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        Prefer: "return=representation"
+      }
+    });
+    if (!response.ok) {
+      if (response.status === 401) throw new Error("Your session has expired. Please sign in again.");
+      throw new Error("Delete failed — the database may not have the delete permission set up yet (see ADMIN.md).");
+    }
+    const deleted = await response.json();
+    if (!deleted.length) {
+      throw new Error("Nothing was deleted — the database may not have the delete permission set up yet (see ADMIN.md).");
+    }
+  }
+
   function formatDate(value) {
     try {
       return new Date(value).toLocaleString("en-AU", {
@@ -104,7 +127,7 @@
     }
 
     return `
-      <tr>
+      <tr data-lead-id="${escapeHtml(lead.id)}" data-lead-email="${escapeHtml(lead.email)}">
         <td>${escapeHtml(formatDate(lead.created_at))}</td>
         <td><span class="admin-pill">${escapeHtml(sourceLabel)}</span></td>
         <td><a href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email)}</a></td>
@@ -114,22 +137,104 @@
         <td>${blockCell}</td>
         <td>${symptomsCell}</td>
         <td>${answersCell}</td>
+        <td><button type="button" class="admin-delete-btn" data-delete-id="${escapeHtml(lead.id)}">Delete</button></td>
       </tr>
     `;
   }
 
-  function renderTable() {
+  // Shared by the table render and the CSV export, so "download" always
+  // means "download what the two filters are currently showing."
+  function getFilteredLeads() {
     const sourceFilter = el("filter-source").value;
     const serviceFilter = el("filter-service").value;
-
-    const filtered = allLeads.filter((lead) => {
+    return allLeads.filter((lead) => {
       if (sourceFilter && lead.source !== sourceFilter) return false;
       if (serviceFilter && lead.service_interest !== serviceFilter) return false;
       return true;
     });
+  }
 
+  function renderTable() {
+    const filtered = getFilteredLeads();
     el("leads-tbody").innerHTML = filtered.map(renderRow).join("");
     el("leads-empty").hidden = filtered.length !== 0;
+  }
+
+  function csvEscape(value) {
+    const s = String(value == null ? "" : value);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function leadToCsvRow(lead) {
+    const sourceLabel = lead.source === "assessment" ? "Self-assessment" : "General enquiry";
+    const serviceLabel = lead.service_interest ? (SERVICE_INTEREST_LABELS[lead.service_interest] || lead.service_interest) : "";
+    const scores = lead.pace_scores || {};
+
+    const selectedSigns = Array.isArray(lead.sign_responses) ? lead.sign_responses.filter((s) => s.selected) : [];
+    const signsText = selectedSigns
+      .map((s) => `[${PACE_DOMAIN_LABELS[s.domain] || s.domain}] ${s.question_text}`)
+      .join(" | ");
+
+    const order = ["position", "acquire", "convert", "expand"];
+    const answers = (Array.isArray(lead.assessment_responses) ? lead.assessment_responses.slice() : [])
+      .sort((a, b) => order.indexOf(a.domain) - order.indexOf(b.domain));
+    const answersText = answers
+      .map((a) => `[${PACE_DOMAIN_LABELS[a.domain] || a.domain}] ${a.question_text} - ${SCALE_LABELS[a.scale_value] || a.scale_value} (${a.scale_value}/5)`)
+      .join(" | ");
+
+    return [
+      formatDate(lead.created_at), sourceLabel, lead.email || "", lead.company || "", lead.role || "",
+      serviceLabel, lead.pace_block ? (PACE_DOMAIN_LABELS[lead.pace_block] || lead.pace_block) : "",
+      scores.position != null ? scores.position : "", scores.acquire != null ? scores.acquire : "",
+      scores.convert != null ? scores.convert : "", scores.expand != null ? scores.expand : "",
+      signsText, answersText
+    ].map(csvEscape).join(",");
+  }
+
+  function exportCsv() {
+    const header = [
+      "Date", "Source", "Email", "Company", "Role", "Interested in", "PACE block",
+      "Position %", "Acquire %", "Convert %", "Expand %", "Signs selected", "Assessment answers"
+    ].map(csvEscape).join(",");
+    const csv = [header].concat(getFilteredLeads().map(leadToCsvRow)).join("\r\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `quotasuccess-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDeleteClick(event) {
+    const btn = event.target.closest("[data-delete-id]");
+    if (!btn) return;
+
+    const row = btn.closest("tr");
+    const email = row ? row.dataset.leadEmail : "this lead";
+    if (!window.confirm(`Delete the ${email} submission? This can't be undone.`)) return;
+
+    const id = btn.dataset.deleteId;
+    btn.disabled = true;
+    btn.textContent = "Deleting…";
+    el("dashboard-error").textContent = "";
+
+    try {
+      await deleteLead(id);
+      allLeads = allLeads.filter((lead) => String(lead.id) !== id);
+      renderTable();
+    } catch (err) {
+      el("dashboard-error").textContent = err.message;
+      if (/expired|sign in/i.test(err.message)) {
+        showLogin();
+        return;
+      }
+      btn.disabled = false;
+      btn.textContent = "Delete";
+    }
   }
 
   async function loadDashboard() {
@@ -173,7 +278,9 @@
 
     el("sign-out-btn").addEventListener("click", showLogin);
     el("refresh-btn").addEventListener("click", loadDashboard);
+    el("export-btn").addEventListener("click", exportCsv);
     el("filter-source").addEventListener("change", renderTable);
     el("filter-service").addEventListener("change", renderTable);
+    el("leads-tbody").addEventListener("click", handleDeleteClick);
   });
 })();

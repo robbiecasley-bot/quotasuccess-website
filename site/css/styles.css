@@ -664,7 +664,7 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
   box-shadow: var(--shadow-card);
   overflow-x: auto;
 }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1080px; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 1180px; }
 .admin-table th {
   text-align: left;
   font-size: 0.75rem;
@@ -696,3 +696,16 @@ body > * .btn--ghost:hover { background: rgba(12,26,46,0.06); }
 .admin-symptom-list li { margin-bottom: 0.25em; }
 .admin-empty { padding: 3rem 1rem; text-align: center; color: var(--text-muted); }
 .admin-error { color: var(--amber); font-size: 0.9rem; margin-top: 0.75rem; }
+.admin-delete-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--amber);
+  background: transparent;
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-sm);
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.admin-delete-btn:hover { background: rgba(192, 97, 42, 0.1); }
+.admin-delete-btn:disabled { opacity: 0.6; cursor: default; }
