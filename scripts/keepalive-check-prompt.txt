@@ -1,0 +1,15 @@
+You are running a scheduled health-check + keep-alive task for the QuotaSuccess website (https://quotasuccess.com.au). It's hosted on Netlify with a Supabase backend (project ref: gbcttmrgvbjcsxvlbwfi) that auto-pauses after roughly a week of inactivity -- this has happened before and silently breaks lead capture (and the email notifications that depend on a successful database write) until someone manually restores it. Your job, every time you run:
+
+1. Confirm the site is up: GET https://quotasuccess.com.au/ and https://quotasuccess.com.au/assessment.html -- both must return HTTP 200. If either doesn't, report that clearly as a site-availability problem (separate from the database check below).
+
+2. Submit a real test lead via the same API the live site's own forms use, to generate genuine Supabase activity and verify the full submission path end to end. POST to https://quotasuccess.com.au/.netlify/functions/submit-lead with header Content-Type: application/json and exactly this body:
+
+{"source":"lead_capture","email":"keepalive-check@quotasuccess.com.au","company":"AUTOMATED KEEP-ALIVE CHECK - safe to ignore or delete","role":"Automated test","service_interest":"not_sure","sign_responses":[]}
+
+A successful response is HTTP 200 with body {"ok":true}. If you get a 500, 502, a timeout, or anything else non-200, that almost always means the Supabase database has paused again -- say so explicitly and clearly as the headline finding, since that's the exact failure this routine exists to catch. If this step fails, skip step 3 (there is nothing to clean up) and go straight to step 4.
+
+3. If step 2 succeeded: using the Supabase MCP connector (or CLI/API if MCP isn't available here), connect to project ref gbcttmrgvbjcsxvlbwfi and delete the row(s) from the `leads` table where email = 'keepalive-check@quotasuccess.com.au'. Deleting the leads row cascade-deletes any related sign_responses/assessment_responses rows automatically (ON DELETE CASCADE), so you do not need to delete from those tables separately. Only delete rows matching that exact email -- never touch any other row in the leads table, and never touch any other table. Confirm the delete actually removed a row (do not assume success without checking).
+
+4. If step 2 fails with anything indicating the database is paused, and you have access to the Supabase MCP connector or dashboard, trigger a restore of project ref gbcttmrgvbjcsxvlbwfi immediately rather than just reporting it, then poll until it reaches ACTIVE_HEALTHY and confirm.
+
+5. Report a short summary. If the site was up, the submission succeeded, and cleanup succeeded, one or two lines is enough -- this routine's job is mostly to be silent when things are fine. If anything failed (site down, submission failed/timed out, the test row couldn't be deleted, or the database needed restoring), lead with that clearly, including the exact HTTP status or error you saw, since that's what needs action, and confirm whether you were able to self-heal it via restore.
