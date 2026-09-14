@@ -26,7 +26,10 @@ if (-not (Test-Path $LogDir)) {
 
 function Write-Log {
     param([string]$Message)
-    Add-Content -Path $LogFile -Value $Message
+    # -Encoding UTF8: without it, Add-Content falls back to the system ANSI
+    # codepage in Windows PowerShell 5.1, which corrupts non-ASCII characters
+    # (em dashes, curly quotes) that claude.exe's own UTF-8 output contains.
+    Add-Content -Path $LogFile -Value $Message -Encoding UTF8
 }
 
 $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss K"
@@ -38,7 +41,6 @@ try {
         Write-Log "FATAL: prompt file not found at $PromptFile"
         exit 1
     }
-    $prompt = Get-Content -Path $PromptFile -Raw
 
     $claude = Get-Command claude -ErrorAction SilentlyContinue
     if (-not $claude) {
@@ -46,16 +48,28 @@ try {
         exit 1
     }
 
+    # The prompt is piped via stdin rather than passed as a CLI argument.
+    # A first run (2026-09-14) proved passing it as an argv element gets
+    # mangled by Windows/PowerShell native command-line parsing: the JSON
+    # body (full of embedded double quotes) came through truncated and with
+    # corrupted characters. Stdin sidesteps that parsing entirely.
     # --permission-mode bypassPermissions: required for a non-interactive,
     # unattended run -- there is no terminal here to approve a tool-use
     # prompt, so without this the process would just hang until Task
     # Scheduler's own timeout killed it, which would look identical to a
     # real failure in this log.
-    $output = & claude -p $prompt `
-        --model claude-sonnet-5 `
-        --permission-mode bypassPermissions `
-        --output-format text `
-        --no-session-persistence 2>&1
+    $prevOutputEncoding = $OutputEncoding
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+    try {
+        $output = Get-Content -Path $PromptFile -Raw -Encoding UTF8 | & claude -p `
+            --model claude-sonnet-5 `
+            --permission-mode bypassPermissions `
+            --output-format text `
+            --no-session-persistence 2>&1
+    }
+    finally {
+        $OutputEncoding = $prevOutputEncoding
+    }
 
     $exitCode = $LASTEXITCODE
     Write-Log "exit code: $exitCode"

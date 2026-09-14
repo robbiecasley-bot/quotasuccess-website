@@ -23,22 +23,56 @@ Windows Task Scheduler.
 - `keepalive-check-prompt.txt` — the exact prompt sent to Claude each run.
   Edit this file directly to change what the check does; no need to touch
   the scheduled task itself.
-- `run-keepalive-check.ps1` — reads the prompt file and runs
-  `claude -p` non-interactively (`--permission-mode bypassPermissions`,
-  since there's no terminal here to approve a tool-use prompt), appending
-  the result to `keepalive-logs/keepalive-check.log`.
+- `run-keepalive-check.ps1` — pipes the prompt file to `claude -p` via
+  **stdin** (`--permission-mode bypassPermissions`, since there's no
+  terminal here to approve a tool-use prompt), appending the result to
+  `keepalive-logs/keepalive-check.log`. The prompt is piped rather than
+  passed as a CLI argument because a real run on 2026-09-14 proved that a
+  long argument full of embedded double quotes gets mangled — truncated and
+  corrupted — by Windows/PowerShell's native command-line parsing. Stdin
+  sidesteps that entirely. `Write-Log` also writes with `-Encoding UTF8`
+  explicitly, since `Add-Content`'s default in Windows PowerShell 5.1 is the
+  system ANSI codepage, which otherwise corrupts non-ASCII characters
+  (em dashes, curly quotes) in claude.exe's UTF-8 output.
 - `run-keepalive-check.bat` — a one-line launcher that just calls the
-  `.ps1` file. Exists only because `schtasks /create` choked on the nested
-  quoting needed to point `/tr` at a `.ps1` path containing spaces; pointing
-  it at this `.bat` instead sidesteps that entirely.
+  `.ps1` file. Exists because pointing a scheduled task straight at a
+  `.ps1` path containing spaces needs nested quoting that's easy to get
+  wrong; pointing it at this `.bat` instead sidesteps that.
 - `keepalive-logs/` — not committed (see `.gitignore`). Grows over time;
   safe to delete or trim the log file at any point.
 
 ## The registered task
 
+Registered via the `ScheduledTasks` PowerShell module, **not** the legacy
+`schtasks /create /tr "<path>"` CLI form:
+
+```powershell
+$action    = New-ScheduledTaskAction -Execute "<path>\run-keepalive-check.bat"
+$trigger   = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Thursday -At 19:00
+$principal = New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\$env:USERNAME" -LogonType Interactive
+$settings  = New-ScheduledTaskSettingsSet -StartWhenAvailable
+Register-ScheduledTask -TaskName "QuotaSuccess Keep-Alive Check" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "..."
 ```
-schtasks /create /tn "QuotaSuccess Keep-Alive Check" /tr "<path>\run-keepalive-check.bat" /sc weekly /d MON,THU /st 19:00 /f
-```
+
+This matters: the task was first registered with `schtasks /create /tr
+"<path with spaces>\run-keepalive-check.bat"`, which reported `SUCCESS` but
+silently corrupted the stored task — `schtasks.exe`'s own `/TR` parser
+splits any path containing a space at the first space, regardless of
+quoting (plain quotes, embedded literal quotes, and PowerShell's `--%`
+stop-parsing token were all tried; all four produced the identical split).
+The result was a task that tried to run a nonexistent file called `Claude`
+with everything after the first space as arguments, failing with
+`ERROR_FILE_NOT_FOUND` on every fire for a full week (7 Sept – 14 Sept)
+without ever showing up as an error anywhere obvious. The `ScheduledTasks`
+module doesn't have this bug — confirmed by exporting the task XML
+(`schtasks /query /tn "..." /xml`) and checking the `<Command>` element
+holds the full, unsplit path with no `<Arguments>` element at all. If this
+task is ever deleted and recreated, use the PowerShell module form above,
+not `schtasks /create /tr`.
+
+`-StartWhenAvailable` is also a genuine improvement over the original
+registration: a missed fire (machine off or asleep at the scheduled time)
+now catches up automatically instead of being silently skipped.
 
 Runs every Monday and Thursday at **7:00pm local time** (Windows resolves
 this against the machine's own timezone, currently `AUS Eastern Standard
