@@ -333,8 +333,8 @@ exports.handler = async function (event) {
     });
 
     if (!response.ok) {
-      const detail = await response.text();
-      return { statusCode: 502, body: JSON.stringify({ error: "Could not save lead", detail }) };
+      console.error("Insert into leads failed", response.status, await response.text());
+      return { statusCode: 502, body: JSON.stringify({ error: "Could not save lead" }) };
     }
 
     const [inserted] = await response.json();
