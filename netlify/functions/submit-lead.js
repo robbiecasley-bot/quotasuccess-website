@@ -41,6 +41,10 @@ const MAX_ASSESSMENT_RESPONSES = 40;
 const MAX_QUESTION_TEXT_LENGTH = 300;
 const MAX_QUESTION_KEY_LENGTH = 100;
 
+// Daily keep-alive pings (.github/workflows/keepalive.yml) exist only to
+// register Supabase activity; they shouldn't email the owner each time.
+const KEEPALIVE_EMAILS = new Set(["keepalive@quotasuccess.com.au"]);
+
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 5);
 const RATE_LIMIT_WINDOW_MINUTES = Number(process.env.RATE_LIMIT_WINDOW_MINUTES || 10);
 
@@ -350,8 +354,10 @@ exports.handler = async function (event) {
         insertRows(supabaseUrl, serviceKey, "assessment_responses", assessmentResponses)
       ]);
 
-      const selectedSigns = signResponses.filter((s) => s.selected);
-      await sendNotificationEmail({ ...row, created_at: inserted.created_at }, selectedSigns, assessmentResponses);
+      if (!KEEPALIVE_EMAILS.has(email)) {
+        const selectedSigns = signResponses.filter((s) => s.selected);
+        await sendNotificationEmail({ ...row, created_at: inserted.created_at }, selectedSigns, assessmentResponses);
+      }
     }
 
     return { statusCode: 200, body: JSON.stringify({ ok: true }) };
